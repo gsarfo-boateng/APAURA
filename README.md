@@ -1,6 +1,6 @@
 # APAURA
 
-**APAURA — Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis** is a Java toolkit for detecting and characterizing alternative polyadenylation (APA) changes from RNA-sequencing data.
+**APAURA - Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis** is a Java toolkit for detecting and characterizing alternative polyadenylation (APA) changes from RNA-sequencing data.
 
 Version: **0.10.1**
 
@@ -16,9 +16,9 @@ It uses different evidence models for long-read/true 3'-end data and conventiona
 
 APAURA separates three concepts:
 
-1. **PAS region** — where an individual poly(A) site occurs.
-2. **APA architecture** — how terminal exons and terminal PAS are organized within a gene.
-3. **APA direction** — how usage changes between conditions.
+1. **PAS region** - where an individual poly(A) site occurs.
+2. **APA architecture** - how terminal exons and terminal PAS are organized within a gene.
+3. **APA direction** - how usage changes between conditions.
 
 ### PAS regions
 
@@ -39,10 +39,10 @@ intergenic
 Gene-level `apa_architecture` values are:
 
 ```text
-TUTR    multiple PAS within the same terminal-exon branch
-ALE     alternative terminal-exon branches
-mixed   both TUTR and ALE architecture
-none    neither TUTR nor ALE is identified
+TUTR multiple PAS within the same terminal-exon branch
+ALE alternative terminal-exon branches
+mixed both TUTR and ALE architecture
+none  neither TUTR nor ALE is identified
 ```
 
 Intronic polyadenylation (IPA) is tracked separately rather than treated as a terminal-exon architecture.
@@ -53,8 +53,8 @@ Examples include:
 
 ```text
 TUTR -> shortening / lengthening
-ALE  -> proximal_switch / distal_switch
-IPA  -> gain / loss
+ALE -> proximal_switch / distal_switch
+IPA -> gain / loss
 mixed or multi-mechanism change -> complex
 ```
 
@@ -67,12 +67,7 @@ Mechanism-specific columns (`tutr_direction`, `ale_direction`, `ipa_direction`) 
 Use `run-direct` for BAM/SAM data in which the transcript-oriented aligned 3' end is meaningful, including Nanopore direct RNA and suitable 3'-end-enriched assays.
 
 ```bash
-java -jar APAURA.jar run-direct \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --control control \
-  --case treated \
-  --out results
+java -jar APAURA.jar run-direct --samples samples.tsv --gtf annotation.gtf --control control --case treated --out results
 ```
 
 To preserve exact single-nucleotide cleavage coordinates:
@@ -84,24 +79,13 @@ To preserve exact single-nucleotide cleavage coordinates:
 ### IsoQuant corrected reads
 
 ```bash
-java -jar APAURA.jar run-isoquant \
-  --samples isoquant_samples.tsv \
-  --gtf annotation.gtf \
-  --control control \
-  --case treated \
-  --out results
+java -jar APAURA.jar run-isoquant --samples isoquant_samples.tsv --gtf annotation.gtf --control control --case treated --out results
 ```
 
 ### Conventional short-read RNA-seq
 
 ```bash
-java -jar APAURA.jar short-read \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --control control \
-  --case treated \
-  --library unstranded \
-  --out results
+java -jar APAURA.jar short-read --samples samples.tsv --gtf annotation.gtf --control control --case treated --library unstranded --out results
 ```
 
 Short-read endpoints are not treated as cleavage sites. APAURA uses CIGAR-aware terminal-exon coverage and annotated PAS structure to estimate tandem-PAS usage.
@@ -109,12 +93,7 @@ Short-read endpoints are not treated as cleavage sites. APAURA uses CIGAR-aware 
 ### RBP motif enrichment
 
 ```bash
-java -jar APAURA.jar rbp-enrich \
-  --sites results/apa_sites.tsv \
-  --genes results/apa.tsv \
-  --fasta genome.fa \
-  --motifs rbp_motifs.meme \
-  --out rbp_results
+java -jar APAURA.jar rbp-enrich --sites results/apa_sites.tsv --genes results/apa.tsv --fasta genome.fa --motifs rbp_motifs.meme --out rbp_results
 ```
 
 The RBP module analyzes motif enrichment around regulated PAS and, for ALE events, terminal-exon splice acceptors. Results are candidate regulatory associations, not proof of direct binding or causality.
@@ -148,12 +127,12 @@ TRT_2	treated	/path/TRT_2_isoquant
 Long-read/direct analyses produce:
 
 ```text
-pas_all.bed        PAS before support filtering
-pas.bed            retained representative PAS
-pas_counts.tsv     PAS counts by sample
-pau.tsv            per-sample poly(A)-site usage
-apa_sites.tsv      PAS-level differential results
-apa.tsv            main gene-level APA results
+pas_all.bed PAS before support filtering
+pas.bed retained representative PAS
+pas_counts.tsv PAS counts by sample
+pau.tsv per-sample poly(A)-site usage
+apa_sites.tsv PAS-level differential results
+apa.tsv main gene-level APA results
 apa_architecture.tsv
 run_info.txt
 ```
@@ -299,10 +278,7 @@ scripts/plot_apaura.R
 Example:
 
 ```bash
-Rscript scripts/plot_apaura.R \
-  --input results \
-  --rbp rbp_results \
-  --out results/figures
+Rscript scripts/plot_apaura.R --input results --rbp rbp_results --out results/figures
 ```
 
 See `docs/PLOTTING.md`.
