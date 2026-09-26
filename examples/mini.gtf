@@ -1,0 +1,4 @@
+chr1	APAURA	gene	101	1000	.	+	.	gene_id "GENE1"; gene_name "DemoGene"; gene_type "protein_coding";
+chr1	APAURA	exon	101	1000	.	+	.	gene_id "GENE1"; gene_name "DemoGene"; gene_type "protein_coding";
+chr1	APAURA	CDS	101	500	.	+	0	gene_id "GENE1"; gene_name "DemoGene"; gene_type "protein_coding";
+chr1	APAURA	UTR	501	1000	.	+	.	gene_id "GENE1"; gene_name "DemoGene"; gene_type "protein_coding";

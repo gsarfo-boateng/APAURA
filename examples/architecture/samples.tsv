@@ -1,0 +1,5 @@
+sample	condition	file
+C1	control	C1.sam
+C2	control	C2.sam
+T1	treated	T1.sam
+T2	treated	T2.sam

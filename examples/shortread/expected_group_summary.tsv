@@ -1,0 +1,2 @@
+group_id	gene_id	gene_name	biotype	chrom	strand	scope	apa_architecture	apa_change	apa_direction	apa_event	n_sites	control_wpi	case_wpi	delta_wpi	apd	min_fdr	status
+GAPA1|TE001	GAPA1	ApaDemo	protein_coding	chr1	+	TANDEM_3UTR	TUTR	yes	shortening	TUTR:shortening	2	0.73500000	0.26500000	-0.47000000	0.47000000	6.587379369e-05	ok
