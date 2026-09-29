@@ -3,6 +3,7 @@
 **APAURA - Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis** is a Java toolkit for detecting and characterizing alternative polyadenylation (APA) changes from RNA-sequencing data.
 
 Version: **0.10.1**
+<img width="1672" height="941" alt="APAURA_Infographics" src="https://github.com/user-attachments/assets/113ccde5-4e53-4fbc-9404-8270e7af559b" />
 
 APAURA follows the biological workflow:
 
