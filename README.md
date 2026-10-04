@@ -53,7 +53,7 @@ java -jar APAURA.jar plot-region --help
 ## Installation
 
 ```bash
-git clone <YOUR-APAURA-REPOSITORY-URL>
+git clone https://github.com/gsarfo-boateng/APAURA.git
 cd APAURA
 mvn clean package
 ./build.sh
