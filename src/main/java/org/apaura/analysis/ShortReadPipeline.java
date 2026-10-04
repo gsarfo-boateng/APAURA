@@ -46,22 +46,25 @@ public final class ShortReadPipeline {
             boolean writePerSample,
             boolean writeDiagnostics,
             double minDeltaPau,
+            double minAleSwitch,
             double minIpaDelta,
             double fdr,
             double wpiThreshold
     ) throws Exception {
         File outputDirectory = ensureOutputDirectory(outDir);
+        File detailsDirectory = ensureSubdirectory(outputDirectory, "details");
         List<Sample> samples = SampleSheet.read(sampleSheet);
         validateConditions(samples, control, caseCondition);
 
         TranscriptAnnotation annotation = TranscriptAnnotation.load(gtf);
+        List<ArchitectureCatalog.Entry> architectureEntries = ArchitectureCatalog.build(
+                annotation.transcripts(),
+                anchorTolerance,
+                pasMergeDistance
+        );
         writeArchitectureCatalog(
-                new File(outputDirectory, "apa_architecture.tsv"),
-                ArchitectureCatalog.build(
-                        annotation.transcripts(),
-                        anchorTolerance,
-                        pasMergeDistance
-                )
+                new File(detailsDirectory, "apa_architecture.tsv"),
+                architectureEntries
         );
 
         ShortReadGroupBuilder.BuildResult buildResult =
@@ -72,6 +75,12 @@ public final class ShortReadPipeline {
                         minSegmentLength
                 );
         List<ShortReadGroup> groups = buildResult.groups;
+        List<ShortReadAle.Group> aleGroups = ShortReadAle.build(
+                annotation.transcripts(),
+                anchorTolerance,
+                pasMergeDistance,
+                minSegmentLength
+        );
         List<ShortReadIpa.Group> ipaGroups = runIpa
                 ? ShortReadIpa.build(
                 annotation.transcripts(),
@@ -81,7 +90,7 @@ public final class ShortReadPipeline {
         )
                 : Collections.<ShortReadIpa.Group>emptyList();
 
-        if (groups.isEmpty() && ipaGroups.isEmpty()) {
+        if (groups.isEmpty() && aleGroups.isEmpty() && ipaGroups.isEmpty()) {
             throw new IllegalArgumentException(
                     "No quantifiable terminal APA or IPA events were built from the GTF. "
                             + "Try lowering --min-segment-length, inspect --ipa-window, "
@@ -100,7 +109,12 @@ public final class ShortReadPipeline {
                         + buildResult.skippedNonQuantifiableFamilies
         );
         System.err.println("[APAURA] annotated tandem APA groups=" + groups.size());
-        writeGroups(new File(outputDirectory, "pas.tsv"), groups);
+        writeGroups(new File(detailsDirectory, "pas.tsv"), groups);
+        System.err.println("[APAURA] annotated ALE genes=" + aleGroups.size());
+        ShortReadAle.writeAnnotation(
+                new File(detailsDirectory, "ale_annotation.tsv"),
+                aleGroups
+        );
 
         if (runIpa) {
             System.err.println(
@@ -110,18 +124,19 @@ public final class ShortReadPipeline {
                             + pasMergeDistance
             );
             ShortReadIpa.writeAnnotation(
-                    new File(outputDirectory, "ipa_annotation.tsv"),
+                    new File(detailsDirectory, "ipa_annotation.tsv"),
                     ipaGroups
             );
         } else {
             System.err.println("[APAURA] IPA analysis=disabled");
-            deleteIpaOutputs(outputDirectory);
+            deleteIpaOutputs(detailsDirectory);
         }
 
         QuantificationBundle quantifications = quantifySamples(
                 samples,
                 groups,
                 ipaGroups,
+                aleGroups,
                 minMapq,
                 keepDuplicates,
                 library
@@ -129,7 +144,7 @@ public final class ShortReadPipeline {
 
         if (writeDiagnostics) {
             writeSegments(
-                    new File(outputDirectory, "pas_coverage.tsv"),
+                    new File(detailsDirectory, "pas_coverage.tsv"),
                     samples,
                     quantifications.apa
             );
@@ -137,9 +152,14 @@ public final class ShortReadPipeline {
 
         if (writePerSample) {
             writeUsage(
-                    new File(outputDirectory, "pau.tsv"),
+                    new File(detailsDirectory, "pau.tsv"),
                     samples,
                     quantifications.apa
+            );
+            ShortReadAle.writeUsage(
+                    new File(detailsDirectory, "ale_usage.tsv"),
+                    samples,
+                    quantifications.ale
             );
         }
 
@@ -159,20 +179,42 @@ public final class ShortReadPipeline {
                 differential.sites
         );
         writeGroupSummary(
-                new File(outputDirectory, "apa.tsv"),
+                new File(detailsDirectory, "apa_groups.tsv"),
                 differential.groups
         );
 
+        ShortReadAle.Results aleDifferential = ShortReadAle.differential(
+                samples,
+                quantifications.ale,
+                control,
+                caseCondition,
+                minSampleEvidence,
+                minInformativeReplicates,
+                minDeltaPau,
+                minAleSwitch,
+                fdr,
+                wpiThreshold
+        );
+        ShortReadAle.writeBranches(
+                new File(detailsDirectory, "ale_branches.tsv"),
+                aleDifferential.branches
+        );
+        ShortReadAle.writeGenes(
+                new File(detailsDirectory, "ale.tsv"),
+                aleDifferential.genes
+        );
+
+        ShortReadIpa.Results ipaDifferential = new ShortReadIpa.Results();
         if (runIpa) {
             if (writePerSample) {
                 ShortReadIpa.writeUsage(
-                        new File(outputDirectory, "ipa_usage.tsv"),
+                        new File(detailsDirectory, "ipa_usage.tsv"),
                         samples,
                         quantifications.ipa
                 );
             }
 
-            ShortReadIpa.Results ipaDifferential = ShortReadIpa.differential(
+            ipaDifferential = ShortReadIpa.differential(
                     samples,
                     quantifications.ipa,
                     control,
@@ -183,14 +225,39 @@ public final class ShortReadPipeline {
                     fdr
             );
             ShortReadIpa.writeSites(
-                    new File(outputDirectory, "ipa_sites.tsv"),
+                    new File(detailsDirectory, "ipa_sites.tsv"),
                     ipaDifferential.sites
             );
             ShortReadIpa.writeGenes(
-                    new File(outputDirectory, "ipa.tsv"),
+                    new File(detailsDirectory, "ipa.tsv"),
                     ipaDifferential.genes
             );
         }
+
+        writeEvents(
+                new File(outputDirectory, "apa_events.tsv"),
+                differential.groups,
+                aleDifferential.genes,
+                ipaDifferential.sites
+        );
+
+        List<ShortReadIntegratedApa.Result> integrated =
+                ShortReadIntegratedApa.integrate(
+                        architectureEntries,
+                        differential.groups,
+                        aleDifferential.genes,
+                        ipaDifferential.genes
+                );
+        writeIntegratedSummary(
+                new File(outputDirectory, "apa.tsv"),
+                integrated
+        );
+
+        cleanupLegacyRootDetailOutputs(outputDirectory);
+        System.err.println(
+                "[APAURA] primary outputs: apa.tsv, apa_events.tsv, apa_sites.tsv; details="
+                        + detailsDirectory.getAbsolutePath()
+        );
 
         System.err.println(
                 "[APAURA] short-read analysis complete: "
@@ -216,6 +283,35 @@ public final class ShortReadPipeline {
             throw new IOException("Cannot create output directory " + outDir);
         }
         return directory;
+    }
+
+    private static File ensureSubdirectory(File parent, String name) throws IOException {
+        File directory = new File(parent, name);
+        if (!directory.exists() && !directory.mkdirs()) {
+            throw new IOException("Cannot create output directory " + directory);
+        }
+        return directory;
+    }
+
+    private static void cleanupLegacyRootDetailOutputs(File outputDirectory) throws IOException {
+        String[] names = {
+                "apa_architecture.tsv",
+                "pas.tsv",
+                "apa_groups.tsv",
+                "ale_annotation.tsv",
+                "ale_branches.tsv",
+                "ale.tsv",
+                "ipa_annotation.tsv",
+                "ipa_sites.tsv",
+                "ipa.tsv",
+                "pau.tsv",
+                "ale_usage.tsv",
+                "ipa_usage.tsv",
+                "pas_coverage.tsv"
+        };
+        for (String name : names) {
+            Files.deleteIfExists(new File(outputDirectory, name).toPath());
+        }
     }
 
     private static void validateConditions(
@@ -245,12 +341,15 @@ public final class ShortReadPipeline {
                 new LinkedHashMap<String, List<ShortReadQuantification>>();
         final Map<String, List<ShortReadIpa.Quantification>> ipa =
                 new LinkedHashMap<String, List<ShortReadIpa.Quantification>>();
+        final Map<String, List<ShortReadAle.Quantification>> ale =
+                new LinkedHashMap<String, List<ShortReadAle.Quantification>>();
     }
 
     private static QuantificationBundle quantifySamples(
             List<Sample> samples,
             List<ShortReadGroup> groups,
             List<ShortReadIpa.Group> ipaGroups,
+            List<ShortReadAle.Group> aleGroups,
             int minMapq,
             boolean keepDuplicates,
             String library
@@ -265,16 +364,18 @@ public final class ShortReadPipeline {
                             + sample.condition
             );
             ShortReadQuantifier.CombinedResult sampleResult =
-                    ShortReadQuantifier.quantifyWithIpa(
+                    ShortReadQuantifier.quantifyWithIpaAndAle(
                             sample.path,
                             groups,
                             ipaGroups,
+                            aleGroups,
                             minMapq,
                             keepDuplicates,
                             library
                     );
             quantifications.apa.put(sample.name, sampleResult.apa);
             quantifications.ipa.put(sample.name, sampleResult.ipa);
+            quantifications.ale.put(sample.name, sampleResult.ale);
         }
         return quantifications;
     }
@@ -285,8 +386,9 @@ public final class ShortReadPipeline {
     ) throws IOException {
         try (PrintWriter writer = writer(file)) {
             writer.println(
-                    "gene_id\tgene_name\tbiotype\tchrom\tstrand\tannotation_architecture\t"
-                            + "components\tn_transcripts\tn_terminal_branches\tn_annotated_pas\t"
+                    "gene_id\tgene_name\tbiotype\tchrom\tgene_start_1based\tgene_end_1based\t"
+                            + "strand\tannotation_architecture\tcomponents\tn_transcripts\t"
+                            + "n_terminal_branches\tn_annotated_pas\tn_terminal_pas\t"
                             + "n_tutr_branches\tn_ipa_compatible_ends"
             );
 
@@ -296,12 +398,15 @@ public final class ShortReadPipeline {
                                 + entry.geneName + "\t"
                                 + entry.biotype + "\t"
                                 + entry.chrom + "\t"
+                                + entry.geneStart1based + "\t"
+                                + entry.geneEnd1based + "\t"
                                 + entry.strand.symbol() + "\t"
                                 + entry.architectureClass + "\t"
                                 + entry.components + "\t"
                                 + entry.transcripts + "\t"
                                 + entry.terminalBranches + "\t"
                                 + entry.annotatedPas + "\t"
+                                + entry.terminalPas + "\t"
                                 + entry.tutrBranches + "\t"
                                 + entry.ipaCompatibleEnds
                 );
@@ -499,41 +604,271 @@ public final class ShortReadPipeline {
     ) throws IOException {
         try (PrintWriter writer = writer(file)) {
             writer.println(
-                    "group_id	gene_id	gene_name	biotype	chrom	strand	scope	"
-                            + "apa_architecture	n_sites	control_wpi	case_wpi	delta_wpi	"
-                            + "control_wpi_sd	case_wpi_sd	apd	"
-                            + "control_n_total	case_n_total	control_n_any_evidence	case_n_any_evidence	"
-                            + "control_n_informative	case_n_informative	min_fdr	"
-                            + "apa_change	observed_direction	apa_direction	apa_event	status"
+                    "group_id\tgene_id\tgene_name\tbiotype\tchrom\tstrand\tscope\t"
+                            + "apa_architecture\tn_sites\tcontrol_wpi\tcase_wpi\tdelta_wpi\t"
+                            + "control_wpi_sd\tcase_wpi_sd\tapd\t"
+                            + "control_n_total\tcase_n_total\tcontrol_n_any_evidence\tcase_n_any_evidence\t"
+                            + "control_n_informative\tcase_n_informative\tmin_pvalue\tmin_fdr\t"
+                            + "apa_change\tobserved_direction\tapa_direction\tapa_event\tstatus"
             );
             for (ShortReadDifferential.GroupResult result : results) {
                 writer.println(
-                        result.group.id + "	"
-                                + result.group.geneId + "	"
-                                + result.group.geneName + "	"
-                                + result.group.biotype + "	"
-                                + result.group.chrom + "	"
-                                + result.group.strand.symbol() + "	"
-                                + result.group.scope + "	"
-                                + result.apaArchitecture + "	"
-                                + result.group.sites.size() + "	"
-                                + fmt(result.controlWpi, "%.8f") + "	"
-                                + fmt(result.caseWpi, "%.8f") + "	"
-                                + fmt(result.deltaWpi, "%.8f") + "	"
-                                + fmt(result.controlWpiSd, "%.8f") + "	"
-                                + fmt(result.caseWpiSd, "%.8f") + "	"
-                                + fmt(result.apd, "%.8f") + "	"
-                                + result.controlTotalReplicates + "	"
-                                + result.caseTotalReplicates + "	"
-                                + result.controlAnyEvidence + "	"
-                                + result.caseAnyEvidence + "	"
-                                + result.controlInformativeReplicates + "	"
-                                + result.caseInformativeReplicates + "	"
-                                + fmt(result.minFdr, "%.10g") + "	"
-                                + (result.apaChange ? "yes" : "no") + "	"
-                                + result.observedDirection + "	"
-                                + result.apaDirection + "	"
-                                + result.apaEvent + "	"
+                        result.group.id + "\t"
+                                + result.group.geneId + "\t"
+                                + result.group.geneName + "\t"
+                                + result.group.biotype + "\t"
+                                + result.group.chrom + "\t"
+                                + result.group.strand.symbol() + "\t"
+                                + result.group.scope + "\t"
+                                + result.apaArchitecture + "\t"
+                                + result.group.sites.size() + "\t"
+                                + fmt(result.controlWpi, "%.8f") + "\t"
+                                + fmt(result.caseWpi, "%.8f") + "\t"
+                                + fmt(result.deltaWpi, "%.8f") + "\t"
+                                + fmt(result.controlWpiSd, "%.8f") + "\t"
+                                + fmt(result.caseWpiSd, "%.8f") + "\t"
+                                + fmt(result.apd, "%.8f") + "\t"
+                                + result.controlTotalReplicates + "\t"
+                                + result.caseTotalReplicates + "\t"
+                                + result.controlAnyEvidence + "\t"
+                                + result.caseAnyEvidence + "\t"
+                                + result.controlInformativeReplicates + "\t"
+                                + result.caseInformativeReplicates + "\t"
+                                + fmt(result.minPvalue, "%.10g") + "\t"
+                                + fmt(result.minFdr, "%.10g") + "\t"
+                                + (result.apaChange ? "yes" : "no") + "\t"
+                                + result.observedDirection + "\t"
+                                + result.apaDirection + "\t"
+                                + result.apaEvent + "\t"
+                                + result.status
+                );
+            }
+        }
+    }
+
+    private static void writeEvents(
+            File file,
+            List<ShortReadDifferential.GroupResult> tutrGroups,
+            List<ShortReadAle.GeneResult> aleGenes,
+            List<ShortReadIpa.SiteResult> ipaSites
+    ) throws IOException {
+        try (PrintWriter writer = writer(file)) {
+            writer.println(
+                    "event_id\tgene_id\tgene_name\tbiotype\tchrom\tstrand\tevent_type\tscope\t"
+                            + "start_1based\tend_1based\trepresentative_position_1based\t"
+                            + "n_sites\tpositions_1based\tcontrol_usage\tcase_usage\tdelta_usage\t"
+                            + "effect_size\teffect_metric\tpvalue\tfdr\tobserved_direction\tdirection\tmethod\tstatus"
+            );
+
+            for (ShortReadDifferential.GroupResult result : tutrGroups) {
+                int start1 = Integer.MAX_VALUE;
+                int end1 = Integer.MIN_VALUE;
+                for (ShortReadSite site : result.group.sites) {
+                    int position1 = site.pos0 + 1;
+                    start1 = Math.min(start1, position1);
+                    end1 = Math.max(end1, position1);
+                }
+                writer.println(
+                        result.group.id + "\t"
+                                + result.group.geneId + "\t"
+                                + result.group.geneName + "\t"
+                                + result.group.biotype + "\t"
+                                + result.group.chrom + "\t"
+                                + result.group.strand.symbol() + "\t"
+                                + "TUTR\t"
+                                + result.group.scope + "\t"
+                                + coordinate(start1) + "\t"
+                                + coordinate(end1) + "\t"
+                                + "NA\t"
+                                + result.group.sites.size() + "\t"
+                                + commaSeparatedPositions(result.group) + "\t"
+                                + fmt(result.controlWpi, "%.8f") + "\t"
+                                + fmt(result.caseWpi, "%.8f") + "\t"
+                                + fmt(result.deltaWpi, "%.8f") + "\t"
+                                + fmt(result.apd, "%.8f") + "\t"
+                                + "APD\t"
+                                + fmt(result.minPvalue, "%.10g") + "\t"
+                                + fmt(result.minFdr, "%.10g") + "\t"
+                                + result.observedDirection + "\t"
+                                + result.apaDirection + "\t"
+                                + "min_of_PAS_tests\t"
+                                + result.status
+                );
+            }
+
+            for (ShortReadAle.GeneResult result : aleGenes) {
+                List<Integer> positions = alePositions1(result.group);
+                int start1 = positions.isEmpty() ? Integer.MAX_VALUE : positions.get(0);
+                int end1 = positions.isEmpty() ? Integer.MIN_VALUE : positions.get(positions.size() - 1);
+                writer.println(
+                        result.group.id + "\t"
+                                + result.group.geneId + "\t"
+                                + result.group.geneName + "\t"
+                                + result.group.biotype + "\t"
+                                + result.group.chrom + "\t"
+                                + result.group.strand.symbol() + "\t"
+                                + "ALE\tALTERNATIVE_LAST_EXON\t"
+                                + coordinate(start1) + "\t"
+                                + coordinate(end1) + "\t"
+                                + "NA\t"
+                                + positions.size() + "\t"
+                                + joinIntegers(positions) + "\t"
+                                + fmt(result.controlWpi, "%.8f") + "\t"
+                                + fmt(result.caseWpi, "%.8f") + "\t"
+                                + fmt(result.deltaWpi, "%.8f") + "\t"
+                                + fmt(result.switchIndex, "%.8f") + "\t"
+                                + "ALE_switch_index\t"
+                                + fmt(result.minPvalue, "%.10g") + "\t"
+                                + fmt(result.minFdr, "%.10g") + "\t"
+                                + result.observedDirection + "\t"
+                                + result.aleDirection + "\t"
+                                + "min_of_ALE_branch_tests\t"
+                                + result.status
+                );
+            }
+
+            for (ShortReadIpa.SiteResult result : ipaSites) {
+                ShortReadIpa.Group group = result.group;
+                List<Integer> positions = new java.util.ArrayList<Integer>();
+                for (Integer position0 : group.annotatedPas0) {
+                    positions.add(position0 + 1);
+                }
+                java.util.Collections.sort(positions);
+                writer.println(
+                        group.id + "\t"
+                                + group.geneId + "\t"
+                                + group.geneName + "\t"
+                                + group.biotype + "\t"
+                                + group.chrom + "\t"
+                                + group.strand.symbol() + "\t"
+                                + "IPA\tINTRONIC_POLYADENYLATION\t"
+                                + (group.intronStart0 + 1) + "\t"
+                                + group.intronEnd0 + "\t"
+                                + (group.representativePas0 + 1) + "\t"
+                                + positions.size() + "\t"
+                                + joinIntegers(positions) + "\t"
+                                + fmt(result.controlUsage, "%.8f") + "\t"
+                                + fmt(result.caseUsage, "%.8f") + "\t"
+                                + fmt(result.delta, "%.8f") + "\t"
+                                + fmt(Double.isFinite(result.delta) ? Math.abs(result.delta) : Double.NaN, "%.8f") + "\t"
+                                + "abs_delta_IPA_usage\t"
+                                + fmt(result.p, "%.10g") + "\t"
+                                + fmt(result.q, "%.10g") + "\t"
+                                + observedIpaDirection(result.delta) + "\t"
+                                + result.direction + "\t"
+                                + result.method + "\t"
+                                + result.status
+                );
+            }
+        }
+    }
+
+    private static String observedIpaDirection(double delta) {
+        if (!Double.isFinite(delta)) return "not_applicable";
+        if (delta > 0.0) return "gain";
+        if (delta < 0.0) return "loss";
+        return "no_change";
+    }
+
+    private static List<Integer> alePositions1(ShortReadAle.Group group) {
+        Set<Integer> positions = new LinkedHashSet<Integer>();
+        for (ShortReadAle.Branch branch : group.branches) {
+            for (Integer position0 : branch.annotatedPas0) {
+                positions.add(position0 + 1);
+            }
+        }
+        List<Integer> ordered = new java.util.ArrayList<Integer>(positions);
+        java.util.Collections.sort(ordered);
+        return ordered;
+    }
+
+    private static String joinIntegers(List<Integer> values) {
+        StringBuilder out = new StringBuilder();
+        for (Integer value : values) {
+            if (out.length() > 0) out.append(',');
+            out.append(value);
+        }
+        return out.toString();
+    }
+
+    private static String coordinate(int value) {
+        return value == Integer.MAX_VALUE || value == Integer.MIN_VALUE
+                ? "NA"
+                : Integer.toString(value);
+    }
+
+    private static void writeIntegratedSummary(
+            File file,
+            List<ShortReadIntegratedApa.Result> results
+    ) throws IOException {
+        try (PrintWriter writer = writer(file)) {
+            writer.println(
+                    "gene_id\tgene_name\tbiotype\tchrom\tgene_start_1based\tgene_end_1based\tstrand\t"
+                            + "n_pas\tn_terminal_pas\tn_transcripts\tn_terminal_branches\tn_tutr_branches\t"
+                            + "n_tutr_groups\tn_tutr_changed_groups\tn_ipa_events\tn_ipa_changed_events\t"
+                            + "apa_architecture\tarchitecture_components\t"
+                            + "tutr_representative_event\ttutr_change\ttutr_observed_direction\ttutr_direction\t"
+                            + "delta_tutr_wpi\ttutr_shift_magnitude\ttutr_min_pvalue\ttutr_min_fdr\ttutr_status\t"
+                            + "ale_change\tale_observed_direction\tale_direction\tdelta_ale_wpi\tale_switch_index\t"
+                            + "ale_min_pvalue\tale_min_fdr\tale_status\t"
+                            + "ipa_representative_event\tipa_change\tipa_direction\tdelta_ipa_usage\t"
+                            + "ipa_max_abs_delta\tipa_min_pvalue\tipa_min_fdr\tipa_status\t"
+                            + "changed_mechanisms\tmechanism_directions\tapa_change\t"
+                            + "apa_direction\tapa_event\tmin_mechanism_pvalue\tmin_mechanism_fdr\tstatus"
+            );
+            for (ShortReadIntegratedApa.Result result : results) {
+                ArchitectureCatalog.Entry a = result.architecture;
+                writer.println(
+                        a.geneId + "\t"
+                                + a.geneName + "\t"
+                                + a.biotype + "\t"
+                                + a.chrom + "\t"
+                                + a.geneStart1based + "\t"
+                                + a.geneEnd1based + "\t"
+                                + a.strand.symbol() + "\t"
+                                + a.annotatedPas + "\t"
+                                + a.terminalPas + "\t"
+                                + a.transcripts + "\t"
+                                + a.terminalBranches + "\t"
+                                + a.tutrBranches + "\t"
+                                + result.nTutrGroups + "\t"
+                                + result.nTutrChangedGroups + "\t"
+                                + result.nIpaEvents + "\t"
+                                + result.nIpaChangedEvents + "\t"
+                                + a.architectureClass + "\t"
+                                + a.components + "\t"
+                                + result.tutrRepresentativeGroup + "\t"
+                                + (result.tutrChange ? "yes" : "no") + "\t"
+                                + result.tutrObservedDirection + "\t"
+                                + result.tutrDirection + "\t"
+                                + fmt(result.tutrDeltaWpi, "%.8f") + "\t"
+                                + fmt(result.tutrShiftMagnitude, "%.8f") + "\t"
+                                + fmt(result.tutrMinPvalue, "%.10g") + "\t"
+                                + fmt(result.tutrMinFdr, "%.10g") + "\t"
+                                + result.tutrStatus + "\t"
+                                + (result.aleChange ? "yes" : "no") + "\t"
+                                + result.aleObservedDirection + "\t"
+                                + result.aleDirection + "\t"
+                                + fmt(result.aleDeltaWpi, "%.8f") + "\t"
+                                + fmt(result.aleSwitchIndex, "%.8f") + "\t"
+                                + fmt(result.aleMinPvalue, "%.10g") + "\t"
+                                + fmt(result.aleMinFdr, "%.10g") + "\t"
+                                + result.aleStatus + "\t"
+                                + result.ipaRepresentativeEvent + "\t"
+                                + (result.ipaChange ? "yes" : "no") + "\t"
+                                + result.ipaDirection + "\t"
+                                + fmt(result.ipaDeltaUsage, "%.8f") + "\t"
+                                + fmt(result.ipaMaxAbsDelta, "%.8f") + "\t"
+                                + fmt(result.ipaMinPvalue, "%.10g") + "\t"
+                                + fmt(result.ipaMinFdr, "%.10g") + "\t"
+                                + result.ipaStatus + "\t"
+                                + result.changedMechanisms + "\t"
+                                + result.mechanismDirections + "\t"
+                                + (result.apaChange ? "yes" : "no") + "\t"
+                                + result.apaDirection + "\t"
+                                + result.apaEvent + "\t"
+                                + fmt(result.minPvalue, "%.10g") + "\t"
+                                + fmt(result.minFdr, "%.10g") + "\t"
                                 + result.status
                 );
             }

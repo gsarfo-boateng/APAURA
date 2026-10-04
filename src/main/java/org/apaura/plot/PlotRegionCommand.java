@@ -631,34 +631,20 @@ public final class PlotRegionCommand {
             File results
     ) throws IOException {
 
-        // Compact short-read output.
+        // Compact short-read output. Prefer the public three-file schema,
+        // while retaining compatibility with older short-read result layouts.
         if (
-                new File(
-                        results,
-                        "pas_coverage.tsv"
-                ).isFile()
-
-                        ||
-
-                        (
-                                new File(
-                                        results,
-                                        "pas.tsv"
-                                ).isFile()
-
-                                        &&
-
-                                        new File(
-                                                results,
-                                                "apa_sites.tsv"
-                                        ).isFile()
-
-                                        &&
-
-                                        new File(
-                                                results,
-                                                "apa.tsv"
-                                        ).isFile()
+                (
+                        new File(results, "apa.tsv").isFile()
+                                && new File(results, "apa_events.tsv").isFile()
+                                && new File(results, "apa_sites.tsv").isFile()
+                )
+                        || new File(new File(results, "details"), "pas_coverage.tsv").isFile()
+                        || new File(results, "pas_coverage.tsv").isFile()
+                        || (
+                                new File(results, "pas.tsv").isFile()
+                                        && new File(results, "apa_sites.tsv").isFile()
+                                        && new File(results, "apa.tsv").isFile()
                         )
         ) {
             return "short-read";

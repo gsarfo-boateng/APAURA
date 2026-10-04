@@ -18,8 +18,7 @@ class ShortReadIpaTest {
         full.addExon(500, 600);
 
         TranscriptModel ipa = transcript("ipa", "G1", Strand.PLUS);
-        ipa.addExon(100, 200);
-        ipa.addExon(300, 350);
+        ipa.addExon(100, 350);
 
         List<ShortReadIpa.Group> groups = ShortReadIpa.build(
                 Arrays.asList(full, ipa),
@@ -31,12 +30,12 @@ class ShortReadIpaTest {
         assertEquals(1, groups.size());
         ShortReadIpa.Group group = groups.get(0);
         assertEquals(349, group.representativePas0);
-        assertEquals(150, group.commonWindow.start0);
+        assertEquals(100, group.commonWindow.start0);
         assertEquals(200, group.commonWindow.end0);
-        assertEquals(300, group.ipaSpecificWindow.start0);
+        assertEquals(250, group.ipaSpecificWindow.start0);
         assertEquals(350, group.ipaSpecificWindow.end0);
         assertEquals(500, group.continuationWindow.start0);
-        assertEquals(550, group.continuationWindow.end0);
+        assertEquals(600, group.continuationWindow.end0);
     }
 
     @Test
@@ -46,8 +45,7 @@ class ShortReadIpaTest {
         full.addExon(500, 600);
 
         TranscriptModel ipa = transcript("ipa", "G2", Strand.MINUS);
-        ipa.addExon(500, 600);
-        ipa.addExon(350, 400);
+        ipa.addExon(350, 600);
 
         List<ShortReadIpa.Group> groups = ShortReadIpa.build(
                 Arrays.asList(full, ipa),
@@ -60,10 +58,10 @@ class ShortReadIpaTest {
         ShortReadIpa.Group group = groups.get(0);
         assertEquals(350, group.representativePas0);
         assertEquals(500, group.commonWindow.start0);
-        assertEquals(550, group.commonWindow.end0);
+        assertEquals(600, group.commonWindow.end0);
         assertEquals(350, group.ipaSpecificWindow.start0);
-        assertEquals(400, group.ipaSpecificWindow.end0);
-        assertEquals(150, group.continuationWindow.start0);
+        assertEquals(450, group.ipaSpecificWindow.end0);
+        assertEquals(100, group.continuationWindow.start0);
         assertEquals(200, group.continuationWindow.end0);
     }
 
@@ -75,16 +73,13 @@ class ShortReadIpaTest {
         full.addExon(500, 600);
 
         TranscriptModel ipa1 = transcript("ipa1", "G4", Strand.PLUS);
-        ipa1.addExon(100, 200);
-        ipa1.addExon(300, 350);
+        ipa1.addExon(100, 350);
 
         TranscriptModel ipa2 = transcript("ipa2", "G4", Strand.PLUS);
-        ipa2.addExon(100, 200);
-        ipa2.addExon(320, 360);
+        ipa2.addExon(100, 360);
 
         TranscriptModel ipa3 = transcript("ipa3", "G4", Strand.PLUS);
-        ipa3.addExon(100, 200);
-        ipa3.addExon(400, 430);
+        ipa3.addExon(100, 430);
 
         List<ShortReadIpa.Group> groups = ShortReadIpa.build(
                 Arrays.asList(full, ipa1, ipa2, ipa3),
@@ -107,8 +102,7 @@ class ShortReadIpaTest {
         full.addExon(500, 600);
 
         TranscriptModel ipa = transcript("ipa", "G3", Strand.PLUS);
-        ipa.addExon(100, 200);
-        ipa.addExon(300, 350);
+        ipa.addExon(100, 350);
 
         ShortReadIpa.Group group = ShortReadIpa.build(
                 Arrays.asList(full, ipa),
@@ -122,6 +116,27 @@ class ShortReadIpaTest {
 
         assertEquals(60, quantification.ipaSpecificReads);
         assertEquals(0.60, quantification.ipaUsage, 1.0E-12);
+    }
+
+
+    @Test
+    void doesNotMisclassifySplicedAlternativeLastExonAsIpa() {
+        TranscriptModel full = transcript("full", "G5", Strand.PLUS);
+        full.addExon(100, 200);
+        full.addExon(500, 600);
+
+        TranscriptModel ale = transcript("ale", "G5", Strand.PLUS);
+        ale.addExon(100, 200);
+        ale.addExon(300, 350);
+
+        List<ShortReadIpa.Group> groups = ShortReadIpa.build(
+                Arrays.asList(full, ale),
+                24,
+                100,
+                30
+        );
+
+        assertEquals(0, groups.size());
     }
 
     private static TranscriptModel transcript(

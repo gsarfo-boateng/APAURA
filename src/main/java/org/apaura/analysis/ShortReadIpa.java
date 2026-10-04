@@ -143,9 +143,13 @@ public final class ShortReadIpa {
         public Strand strand;
         public int nIpaEvents;
         public int nSignificantEvents;
+        public String representativeEvent = "NA";
+        public double representativeDelta = Double.NaN;
         public String ipaDirection = "stable";
-        public double maxAbsDelta;
-        public double minFdr = 1.0;
+        public double maxAbsDelta = Double.NaN;
+        public double minPvalue = Double.NaN;
+        public double minFdr = Double.NaN;
+        public String status = "not_tested";
     }
 
     public static final class Results {
@@ -178,6 +182,55 @@ public final class ShortReadIpa {
         EventBuilder(Support support) {
             this.support = support;
         }
+    }
+
+    /**
+     * Return transcripts eligible for terminal TUTR/ALE architecture.
+     *
+     * <p>A classical IPA transcript extends the upstream exon of a longer
+     * isoform directly into that isoform's intron and terminates there. Such a
+     * transcript is a non-terminal termination route and must not create an ALE
+     * branch or a tandem-terminal PAS group. Spliced alternative last exons do
+     * not satisfy this predicate and remain eligible for ALE.</p>
+     */
+    static List<TranscriptModel> terminalArchitectureTranscripts(
+            List<TranscriptModel> transcripts
+    ) {
+        Map<String, List<TranscriptModel>> byGene = groupByGene(transcripts);
+        List<TranscriptModel> retained = new ArrayList<TranscriptModel>();
+        for (List<TranscriptModel> geneTranscripts : byGene.values()) {
+            for (TranscriptModel candidate : geneTranscripts) {
+                if (!isStructuralIpaTranscript(candidate, geneTranscripts)) {
+                    retained.add(candidate);
+                }
+            }
+        }
+        return retained;
+    }
+
+    /** True only for the unspliced intronic-termination structure used by IPA. */
+    static boolean isStructuralIpaTranscript(
+            TranscriptModel candidate,
+            List<TranscriptModel> geneTranscripts
+    ) {
+        if (candidate == null || candidate.terminalExon() == null) {
+            return false;
+        }
+        int pas0 = candidate.pasPos0();
+        for (TranscriptModel host : geneTranscripts) {
+            if (candidate == host
+                    || !candidate.geneId.equals(host.geneId)
+                    || !candidate.chrom.equals(host.chrom)
+                    || candidate.strand != host.strand) {
+                continue;
+            }
+            // A one-base structural window applies the same topology test as
+            // IPA building without imposing a user quantification-window size.
+            if (support(candidate, host, pas0, 1, 1) != null) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Build non-redundant, annotation-supported IPA events. */
@@ -462,8 +515,17 @@ public final class ShortReadIpa {
 
             Interval upstream = host.strand == Strand.MINUS ? right : left;
             Interval continuation = host.strand == Strand.MINUS ? left : right;
-            Interval shared = bestSharedExonicInterval(candidate, upstream, host.strand);
             Interval terminal = candidate.terminalExon();
+
+            /*
+             * Classical intronic polyadenylation extends the host upstream exon
+             * into the host intron. If the candidate reaches the intronic PAS
+             * through a distinct spliced terminal exon, that is an alternative
+             * last-exon branch and belongs to ALE rather than IPA. Restrict the
+             * shared window to the candidate terminal exon itself to keep these
+             * mechanisms disjoint.
+             */
+            Interval shared = intersect(terminal, upstream);
             Interval ipaSpecific = intersect(terminal, new Interval(intronStart0, intronEnd0));
             if (shared == null || ipaSpecific == null) {
                 continue;
@@ -795,6 +857,10 @@ public final class ShortReadIpa {
         Map<String, GeneResult> byGene = new LinkedHashMap<String, GeneResult>();
         Map<String, Boolean> hasGain = new LinkedHashMap<String, Boolean>();
         Map<String, Boolean> hasLoss = new LinkedHashMap<String, Boolean>();
+        Map<String, SiteResult> representative = new LinkedHashMap<String, SiteResult>();
+        Map<String, Boolean> anyOk = new LinkedHashMap<String, Boolean>();
+        Map<String, Boolean> anySparse = new LinkedHashMap<String, Boolean>();
+        Map<String, Boolean> anyEvidenceFailure = new LinkedHashMap<String, Boolean>();
 
         for (SiteResult site : results.sites) {
             GeneResult gene = byGene.get(site.group.geneId);
@@ -808,14 +874,38 @@ public final class ShortReadIpa {
                 byGene.put(gene.geneId, gene);
             }
             gene.nIpaEvents++;
-            gene.minFdr = Math.min(gene.minFdr, site.q);
-            gene.maxAbsDelta = Math.max(gene.maxAbsDelta, Math.abs(site.delta));
+            if (Double.isFinite(site.p)
+                    && (!Double.isFinite(gene.minPvalue) || site.p < gene.minPvalue)) {
+                gene.minPvalue = site.p;
+            }
+            if (Double.isFinite(site.q)
+                    && (!Double.isFinite(gene.minFdr) || site.q < gene.minFdr)) {
+                gene.minFdr = site.q;
+            }
+            if (Double.isFinite(site.delta)) {
+                double absDelta = Math.abs(site.delta);
+                if (!Double.isFinite(gene.maxAbsDelta) || absDelta > gene.maxAbsDelta) {
+                    gene.maxAbsDelta = absDelta;
+                }
+            }
             if ("gain".equals(site.direction)) {
                 gene.nSignificantEvents++;
                 hasGain.put(gene.geneId, true);
             } else if ("loss".equals(site.direction)) {
                 gene.nSignificantEvents++;
                 hasLoss.put(gene.geneId, true);
+            }
+
+            SiteResult current = representative.get(gene.geneId);
+            if (current == null || betterRepresentative(site, current)) {
+                representative.put(gene.geneId, site);
+            }
+
+            if ("ok".equals(site.status)) anyOk.put(gene.geneId, true);
+            else if ("insufficient_replicate_support".equals(site.status)) {
+                anySparse.put(gene.geneId, true);
+            } else if ("insufficient_evidence".equals(site.status)) {
+                anyEvidenceFailure.put(gene.geneId, true);
             }
         }
 
@@ -829,8 +919,41 @@ public final class ShortReadIpa {
             } else if (loss) {
                 gene.ipaDirection = "loss";
             }
+
+            SiteResult best = representative.get(gene.geneId);
+            if (best != null) {
+                gene.representativeEvent = best.group.id;
+                gene.representativeDelta = best.delta;
+            }
+
+            gene.status = Boolean.TRUE.equals(anyOk.get(gene.geneId))
+                    ? "ok"
+                    : Boolean.TRUE.equals(anySparse.get(gene.geneId))
+                    ? "insufficient_replicate_support"
+                    : Boolean.TRUE.equals(anyEvidenceFailure.get(gene.geneId))
+                    ? "insufficient_evidence"
+                    : "not_tested";
             results.genes.add(gene);
         }
+    }
+
+    private static boolean betterRepresentative(SiteResult candidate, SiteResult current) {
+        boolean candidateChanged = "gain".equals(candidate.direction) || "loss".equals(candidate.direction);
+        boolean currentChanged = "gain".equals(current.direction) || "loss".equals(current.direction);
+        if (candidateChanged != currentChanged) {
+            return candidateChanged;
+        }
+        if (Double.isFinite(candidate.q) && Double.isFinite(current.q)) {
+            int comparison = Double.compare(candidate.q, current.q);
+            if (comparison != 0) return comparison < 0;
+        } else if (Double.isFinite(candidate.q)) {
+            return true;
+        } else if (Double.isFinite(current.q)) {
+            return false;
+        }
+        double candidateAbs = Double.isFinite(candidate.delta) ? Math.abs(candidate.delta) : -1.0;
+        double currentAbs = Double.isFinite(current.delta) ? Math.abs(current.delta) : -1.0;
+        return candidateAbs > currentAbs;
     }
 
     public static void writeAnnotation(File file, List<Group> groups) throws IOException {
@@ -943,22 +1066,26 @@ public final class ShortReadIpa {
         try (PrintWriter writer = writer(file)) {
             writer.println(
                     "gene_id\tgene_name\tbiotype\tchrom\tstrand\tn_ipa_events\t"
-                            + "n_significant_ipa_events\tipa_direction\tmax_abs_delta_ipa\tmin_fdr"
+                            + "n_significant_ipa_events\trepresentative_ipa_event\t"
+                            + "representative_delta_ipa_usage\tipa_direction\tmax_abs_delta_ipa\t"
+                            + "min_pvalue\tmin_fdr\tstatus"
             );
             for (GeneResult result : results) {
-                writer.printf(
-                        Locale.ROOT,
-                        "%s\t%s\t%s\t%s\t%c\t%d\t%d\t%s\t%.8f\t%.10g%n",
-                        result.geneId,
-                        result.geneName,
-                        result.biotype,
-                        result.chrom,
-                        result.strand.symbol(),
-                        result.nIpaEvents,
-                        result.nSignificantEvents,
-                        result.ipaDirection,
-                        result.maxAbsDelta,
-                        result.minFdr
+                writer.println(
+                        result.geneId + "\t"
+                                + result.geneName + "\t"
+                                + result.biotype + "\t"
+                                + result.chrom + "\t"
+                                + result.strand.symbol() + "\t"
+                                + result.nIpaEvents + "\t"
+                                + result.nSignificantEvents + "\t"
+                                + result.representativeEvent + "\t"
+                                + fmt(result.representativeDelta, "%.8f") + "\t"
+                                + result.ipaDirection + "\t"
+                                + fmt(result.maxAbsDelta, "%.8f") + "\t"
+                                + fmt(result.minPvalue, "%.10g") + "\t"
+                                + fmt(result.minFdr, "%.10g") + "\t"
+                                + result.status
                 );
             }
         }

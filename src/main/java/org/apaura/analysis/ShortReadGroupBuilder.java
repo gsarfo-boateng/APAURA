@@ -70,9 +70,11 @@ public final class ShortReadGroupBuilder {
         int skippedNonQuantifiableFamilies = 0;
 
         for (List<TranscriptModel> geneTranscripts : transcriptsByGene.values()) {
+            List<TranscriptModel> terminalTranscripts =
+                    ShortReadIpa.terminalArchitectureTranscripts(geneTranscripts);
             TerminalFamilyReconciler.Result reconciliation =
                     TerminalFamilyReconciler.reconcile(
-                            geneTranscripts,
+                            terminalTranscripts,
                             anchorTolerance,
                             pasMergeDistance
                     );

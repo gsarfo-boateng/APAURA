@@ -112,13 +112,16 @@ public final class ShortReadQuantifier {
     public static final class CombinedResult {
         public final List<ShortReadQuantification> apa;
         public final List<ShortReadIpa.Quantification> ipa;
+        public final List<ShortReadAle.Quantification> ale;
 
         CombinedResult(
                 List<ShortReadQuantification> apa,
-                List<ShortReadIpa.Quantification> ipa
+                List<ShortReadIpa.Quantification> ipa,
+                List<ShortReadAle.Quantification> ale
         ) {
             this.apa = apa;
             this.ipa = ipa;
+            this.ale = ale;
         }
     }
 
@@ -197,6 +200,131 @@ public final class ShortReadQuantifier {
         }
     }
 
+    private static final class AleRegionRef {
+        final int groupIndex;
+        final int branchIndex;
+        final ShortReadAle.Group group;
+        final ShortReadAle.Branch branch;
+        final int start0;
+        final int end0;
+
+        AleRegionRef(
+                int groupIndex,
+                int branchIndex,
+                ShortReadAle.Group group,
+                ShortReadAle.Branch branch,
+                CoverageSegment region
+        ) {
+            this.groupIndex = groupIndex;
+            this.branchIndex = branchIndex;
+            this.group = group;
+            this.branch = branch;
+            this.start0 = region.start0;
+            this.end0 = region.end0;
+        }
+    }
+
+    private static final class AleBranchRef {
+        final int groupIndex;
+        final int branchIndex;
+        final ShortReadAle.Group group;
+        final ShortReadAle.Branch branch;
+
+        AleBranchRef(
+                int groupIndex,
+                int branchIndex,
+                ShortReadAle.Group group,
+                ShortReadAle.Branch branch
+        ) {
+            this.groupIndex = groupIndex;
+            this.branchIndex = branchIndex;
+            this.group = group;
+            this.branch = branch;
+        }
+    }
+
+    private static final class AleIndex {
+        private final Map<String, Map<Integer, List<AleRegionRef>>> regionBins =
+                new HashMap<String, Map<Integer, List<AleRegionRef>>>();
+        private final Map<String, Map<Integer, List<AleBranchRef>>> anchors =
+                new HashMap<String, Map<Integer, List<AleBranchRef>>>();
+
+        AleIndex(List<ShortReadAle.Group> groups) {
+            for (int groupIndex = 0; groupIndex < groups.size(); groupIndex++) {
+                ShortReadAle.Group group = groups.get(groupIndex);
+                for (int branchIndex = 0; branchIndex < group.branches.size(); branchIndex++) {
+                    ShortReadAle.Branch branch = group.branches.get(branchIndex);
+                    AleBranchRef branchRef = new AleBranchRef(
+                            groupIndex,
+                            branchIndex,
+                            group,
+                            branch
+                    );
+                    anchors.computeIfAbsent(
+                            group.chrom,
+                            key -> new HashMap<Integer, List<AleBranchRef>>()
+                    ).computeIfAbsent(
+                            branch.anchor0,
+                            key -> new ArrayList<AleBranchRef>()
+                    ).add(branchRef);
+
+                    for (CoverageSegment region : branch.uniqueRegions) {
+                        addRegion(groupIndex, branchIndex, group, branch, region);
+                    }
+                }
+            }
+        }
+
+        Set<AleRegionRef> regionCandidates(String chromosome, int start0, int end0) {
+            Map<Integer, List<AleRegionRef>> chromosomeBins = regionBins.get(chromosome);
+            if (chromosomeBins == null) return Collections.emptySet();
+            Set<AleRegionRef> out = new HashSet<AleRegionRef>();
+            int firstBin = Math.max(0, start0 / BIN_SIZE);
+            int lastBin = Math.max(0, (end0 - 1) / BIN_SIZE);
+            for (int bin = firstBin; bin <= lastBin; bin++) {
+                List<AleRegionRef> refs = chromosomeBins.get(bin);
+                if (refs != null) out.addAll(refs);
+            }
+            return out;
+        }
+
+        List<AleBranchRef> anchorCandidates(String chromosome, int anchor0) {
+            Map<Integer, List<AleBranchRef>> chromosomeAnchors = anchors.get(chromosome);
+            if (chromosomeAnchors == null) return Collections.emptyList();
+            List<AleBranchRef> refs = chromosomeAnchors.get(anchor0);
+            return refs == null ? Collections.<AleBranchRef>emptyList() : refs;
+        }
+
+        private void addRegion(
+                int groupIndex,
+                int branchIndex,
+                ShortReadAle.Group group,
+                ShortReadAle.Branch branch,
+                CoverageSegment region
+        ) {
+            AleRegionRef ref = new AleRegionRef(
+                    groupIndex,
+                    branchIndex,
+                    group,
+                    branch,
+                    region
+            );
+            int firstBin = region.start0 / BIN_SIZE;
+            int lastBin = (region.end0 - 1) / BIN_SIZE;
+            Map<Integer, List<AleRegionRef>> chromosomeBins =
+                    regionBins.computeIfAbsent(
+                            group.chrom,
+                            key -> new HashMap<Integer, List<AleRegionRef>>()
+                    );
+            for (int bin = firstBin; bin <= lastBin; bin++) {
+                chromosomeBins.computeIfAbsent(
+                        bin,
+                        key -> new ArrayList<AleRegionRef>()
+                ).add(ref);
+            }
+        }
+    }
+
     public static List<ShortReadQuantification> quantify(
             String bam,
             List<ShortReadGroup> groups,
@@ -222,6 +350,26 @@ public final class ShortReadQuantifier {
             boolean keepDuplicates,
             String library
     ) throws IOException {
+        return quantifyWithIpaAndAle(
+                bam,
+                groups,
+                ipaGroups,
+                Collections.<ShortReadAle.Group>emptyList(),
+                minMapq,
+                keepDuplicates,
+                library
+        );
+    }
+
+    public static CombinedResult quantifyWithIpaAndAle(
+            String bam,
+            List<ShortReadGroup> groups,
+            List<ShortReadIpa.Group> ipaGroups,
+            List<ShortReadAle.Group> aleGroups,
+            int minMapq,
+            boolean keepDuplicates,
+            String library
+    ) throws IOException {
         long[][] alignedBases = initializeAlignedBaseMatrix(groups);
         int[] commonSegmentReads = new int[groups.size()];
         SegmentIndex index = new SegmentIndex(groups);
@@ -231,9 +379,16 @@ public final class ShortReadQuantifier {
         int[] ipaContinuationReads = new int[ipaGroups.size()];
         IpaWindowIndex ipaIndex = new IpaWindowIndex(ipaGroups);
 
+        int[][] aleBranchReads = new int[aleGroups.size()][];
+        for (int groupIndex = 0; groupIndex < aleGroups.size(); groupIndex++) {
+            aleBranchReads[groupIndex] = new int[aleGroups.get(groupIndex).branches.size()];
+        }
+        AleIndex aleIndex = new AleIndex(aleGroups);
+
         long alignmentsSeen = 0;
         long alignmentsUsed = 0;
         long alignmentsUsedForIpa = 0;
+        long alignmentsUsedForAle = 0;
 
         try (AlignmentReader reader = AlignmentReaderFactory.open(bam)) {
             AlignmentRecord alignment;
@@ -248,6 +403,8 @@ public final class ShortReadQuantifier {
                 Set<Integer> ipaCommonHits = new HashSet<Integer>();
                 Set<Integer> ipaSpecificHits = new HashSet<Integer>();
                 Set<Integer> ipaContinuationHits = new HashSet<Integer>();
+                Map<Integer, Set<Integer>> aleHits =
+                        new HashMap<Integer, Set<Integer>>();
                 boolean overlapsApaRegion = false;
 
                 for (Interval block : alignment.alignedBlocks) {
@@ -305,6 +462,53 @@ public final class ShortReadQuantifier {
                             ipaContinuationHits.add(window.groupIndex);
                         }
                     }
+
+                    for (AleRegionRef region : aleIndex.regionCandidates(
+                            alignment.referenceName,
+                            block.start0,
+                            block.end0
+                    )) {
+                        if (!strandMatches(
+                                region.group.strand,
+                                transcriptStrand,
+                                library
+                        )) {
+                            continue;
+                        }
+                        int overlapStart = Math.max(block.start0, region.start0);
+                        int overlapEnd = Math.min(block.end0, region.end0);
+                        if (overlapEnd > overlapStart) {
+                            addAleHit(aleHits, region.groupIndex, region.branchIndex);
+                        }
+                    }
+                }
+
+                // Junction support is especially important for ALE branches whose
+                // terminal exons have little or no branch-unique exonic sequence.
+                for (int blockIndex = 1; blockIndex < alignment.alignedBlocks.size(); blockIndex++) {
+                    Interval left = alignment.alignedBlocks.get(blockIndex - 1);
+                    Interval right = alignment.alignedBlocks.get(blockIndex);
+                    if (right.start0 <= left.end0) {
+                        continue;
+                    }
+                    for (AleBranchRef ref : aleIndex.anchorCandidates(
+                            alignment.referenceName,
+                            right.start0
+                    )) {
+                        if (ref.group.strand == Strand.PLUS
+                                && strandMatches(ref.group.strand, transcriptStrand, library)) {
+                            addAleHit(aleHits, ref.groupIndex, ref.branchIndex);
+                        }
+                    }
+                    for (AleBranchRef ref : aleIndex.anchorCandidates(
+                            alignment.referenceName,
+                            left.end0
+                    )) {
+                        if (ref.group.strand == Strand.MINUS
+                                && strandMatches(ref.group.strand, transcriptStrand, library)) {
+                            addAleHit(aleHits, ref.groupIndex, ref.branchIndex);
+                        }
+                    }
                 }
 
                 for (Integer groupIndex : commonSegmentHits) {
@@ -320,6 +524,15 @@ public final class ShortReadQuantifier {
                     ipaContinuationReads[groupIndex]++;
                 }
 
+                boolean usedForAle = false;
+                for (Map.Entry<Integer, Set<Integer>> entry : aleHits.entrySet()) {
+                    if (entry.getValue().size() == 1) {
+                        int branchIndex = entry.getValue().iterator().next();
+                        aleBranchReads[entry.getKey()][branchIndex]++;
+                        usedForAle = true;
+                    }
+                }
+
                 if (overlapsApaRegion) {
                     alignmentsUsed++;
                 }
@@ -328,6 +541,9 @@ public final class ShortReadQuantifier {
                         || !ipaContinuationHits.isEmpty()) {
                     alignmentsUsedForIpa++;
                 }
+                if (usedForAle) {
+                    alignmentsUsedForAle++;
+                }
             }
         }
 
@@ -335,6 +551,7 @@ public final class ShortReadQuantifier {
                 "[APAURA] short-read alignments seen=" + alignmentsSeen
                         + " overlapping_APA_regions=" + alignmentsUsed
                         + " overlapping_IPA_windows=" + alignmentsUsedForIpa
+                        + " assigned_ALE_evidence=" + alignmentsUsedForAle
                         + " file=" + bam
         );
 
@@ -359,7 +576,27 @@ public final class ShortReadQuantifier {
             ));
         }
 
-        return new CombinedResult(apaResults, ipaResults);
+        List<ShortReadAle.Quantification> aleResults =
+                new ArrayList<ShortReadAle.Quantification>();
+        for (int groupIndex = 0; groupIndex < aleGroups.size(); groupIndex++) {
+            aleResults.add(ShortReadAle.quantify(
+                    aleGroups.get(groupIndex),
+                    aleBranchReads[groupIndex]
+            ));
+        }
+
+        return new CombinedResult(apaResults, ipaResults, aleResults);
+    }
+
+    private static void addAleHit(
+            Map<Integer, Set<Integer>> hits,
+            int groupIndex,
+            int branchIndex
+    ) {
+        hits.computeIfAbsent(
+                groupIndex,
+                key -> new HashSet<Integer>()
+        ).add(branchIndex);
     }
 
     private static long[][] initializeAlignedBaseMatrix(List<ShortReadGroup> groups) {

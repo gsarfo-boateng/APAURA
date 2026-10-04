@@ -5,7 +5,6 @@ import org.apaura.model.Strand;
 import org.apaura.model.TranscriptModel;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -30,9 +29,14 @@ public final class ArchitectureCatalog {
         public String architectureClass;
         public String components;
         public Strand strand;
+        public int geneStart1based;
+        public int geneEnd1based;
         public int transcripts;
         public int terminalBranches;
+        /** All unique annotated transcript-end PAS after PAS reconciliation. */
         public int annotatedPas;
+        /** PAS retained in terminal TUTR/ALE architecture after IPA separation. */
+        public int terminalPas;
         public int tutrBranches;
         public int ipaCompatibleEnds;
     }
@@ -57,13 +61,25 @@ public final class ArchitectureCatalog {
             if (geneTranscripts.isEmpty()) {
                 continue;
             }
-            TerminalFamilyReconciler.Result reconciliation =
+            TerminalFamilyReconciler.Result allReconciliation =
                     TerminalFamilyReconciler.reconcile(
                             geneTranscripts,
                             anchorTolerance,
                             pasMergeDistance
                     );
-            entries.add(buildEntry(geneTranscripts, reconciliation.families));
+            List<TranscriptModel> terminalTranscripts =
+                    ShortReadIpa.terminalArchitectureTranscripts(geneTranscripts);
+            TerminalFamilyReconciler.Result terminalReconciliation =
+                    TerminalFamilyReconciler.reconcile(
+                            terminalTranscripts,
+                            anchorTolerance,
+                            pasMergeDistance
+                    );
+            entries.add(buildEntry(
+                    geneTranscripts,
+                    terminalReconciliation.families,
+                    allReconciliation.families
+            ));
         }
 
         entries.sort((left, right) -> {
@@ -77,7 +93,8 @@ public final class ArchitectureCatalog {
 
     private static Entry buildEntry(
             List<TranscriptModel> transcripts,
-            List<TerminalFamilyReconciler.Family> families
+            List<TerminalFamilyReconciler.Family> terminalFamilies,
+            List<TerminalFamilyReconciler.Family> allFamilies
     ) {
         TranscriptModel first = transcripts.get(0);
         Entry entry = new Entry();
@@ -86,65 +103,63 @@ public final class ArchitectureCatalog {
         entry.biotype = preferredBiotype(transcripts);
         entry.chrom = first.chrom;
         entry.strand = first.strand;
+        int geneStart0 = Integer.MAX_VALUE;
+        int geneEnd0 = Integer.MIN_VALUE;
+        for (TranscriptModel transcript : transcripts) {
+            for (Interval exon : transcript.exons) {
+                geneStart0 = Math.min(geneStart0, exon.start0);
+                geneEnd0 = Math.max(geneEnd0, exon.end0);
+            }
+        }
+        entry.geneStart1based = geneStart0 == Integer.MAX_VALUE ? 0 : geneStart0 + 1;
+        entry.geneEnd1based = geneEnd0 == Integer.MIN_VALUE ? 0 : geneEnd0;
         entry.transcripts = transcripts.size();
-        entry.terminalBranches = families.size();
+        entry.terminalBranches = terminalFamilies.size();
 
-        Set<String> physicalPas = new LinkedHashSet<String>();
-        for (TerminalFamilyReconciler.Family family : families) {
+        Set<String> terminalPas = physicalPas(terminalFamilies);
+        for (TerminalFamilyReconciler.Family family : terminalFamilies) {
             if (family.pasPositions.size() >= 2) {
                 entry.tutrBranches++;
             }
-            for (Integer pas : family.pasPositions) {
-                physicalPas.add(
-                        family.chrom + "\u0001" + family.strand.symbol() + "\u0001" + pas
-                );
-            }
         }
 
-        entry.annotatedPas = physicalPas.size();
-        entry.ipaCompatibleEnds = countIpaCompatibleEnds(families, transcripts);
+        entry.annotatedPas = physicalPas(allFamilies).size();
+        entry.terminalPas = terminalPas.size();
+        entry.ipaCompatibleEnds = countIpaCompatibleEnds(transcripts);
         setArchitecture(entry);
         return entry;
     }
 
+    private static Set<String> physicalPas(
+            List<TerminalFamilyReconciler.Family> families
+    ) {
+        Set<String> positions = new LinkedHashSet<String>();
+        for (TerminalFamilyReconciler.Family family : families) {
+            for (Integer pas : family.pasPositions) {
+                positions.add(
+                        family.chrom + "\u0001" + family.strand.symbol() + "\u0001" + pas
+                );
+            }
+        }
+        return positions;
+    }
+
     private static int countIpaCompatibleEnds(
-            List<TerminalFamilyReconciler.Family> families,
             List<TranscriptModel> transcripts
     ) {
         Set<String> counted = new LinkedHashSet<String>();
-        for (TerminalFamilyReconciler.Family family : families) {
-            for (Integer pas : family.pasPositions) {
-                if (fallsInAnyIntron(pas, family.chrom, family.strand, transcripts)) {
-                    counted.add(
-                            family.chrom
-                                    + "\u0001"
-                                    + family.strand.symbol()
-                                    + "\u0001"
-                                    + pas
-                    );
-                }
+        for (TranscriptModel transcript : transcripts) {
+            if (ShortReadIpa.isStructuralIpaTranscript(transcript, transcripts)) {
+                counted.add(
+                        transcript.chrom
+                                + "\u0001"
+                                + transcript.strand.symbol()
+                                + "\u0001"
+                                + transcript.pasPos0()
+                );
             }
         }
         return counted.size();
-    }
-
-    private static boolean fallsInAnyIntron(
-            int pasPosition,
-            String chrom,
-            Strand strand,
-            List<TranscriptModel> transcripts
-    ) {
-        for (TranscriptModel transcript : transcripts) {
-            if (!chrom.equals(transcript.chrom) || strand != transcript.strand) {
-                continue;
-            }
-            for (Interval intron : introns(transcript)) {
-                if (intron.contains(pasPosition)) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     private static void setArchitecture(Entry entry) {
@@ -196,21 +211,6 @@ public final class ArchitectureCatalog {
             }
         }
         return biotype;
-    }
-
-    private static List<Interval> introns(TranscriptModel transcript) {
-        List<Interval> exons = new ArrayList<Interval>(transcript.exons);
-        exons.sort(Comparator.comparingInt(interval -> interval.start0));
-
-        List<Interval> introns = new ArrayList<Interval>();
-        for (int index = 1; index < exons.size(); index++) {
-            Interval previous = exons.get(index - 1);
-            Interval current = exons.get(index);
-            if (previous.end0 < current.start0) {
-                introns.add(new Interval(previous.end0, current.start0));
-            }
-        }
-        return introns;
     }
 
     private static String join(List<String> values, String separator) {

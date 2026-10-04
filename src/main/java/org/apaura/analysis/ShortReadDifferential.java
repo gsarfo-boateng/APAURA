@@ -58,6 +58,7 @@ public final class ShortReadDifferential {
         public double controlWpiSd = Double.NaN;
         public double caseWpiSd = Double.NaN;
         public double apd = Double.NaN;
+        public double minPvalue = Double.NaN;
         public double minFdr = Double.NaN;
 
         public int controlTotalReplicates;
@@ -512,6 +513,11 @@ public final class ShortReadDifferential {
 
         if (siteResults != null) {
             for (SiteResult site : siteResults) {
+                if (Double.isFinite(site.p)
+                        && (!Double.isFinite(result.minPvalue)
+                        || site.p < result.minPvalue)) {
+                    result.minPvalue = site.p;
+                }
                 if (Double.isFinite(site.q)) {
                     if (!Double.isFinite(result.minFdr) || site.q < result.minFdr) {
                         result.minFdr = site.q;
