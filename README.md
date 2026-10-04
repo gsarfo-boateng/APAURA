@@ -254,4 +254,10 @@ java -jar APAURA.jar --citation
 
 ## License
 
-MIT License. See `LICENSE`.
+APAURA is copyright © 2026 George Boateng-Sarfo. All rights reserved.
+
+APAURA is made available for academic, educational, and non-commercial research use under the APAURA Academic and Research Use License.
+
+Users may use and modify APAURA for non-commercial research with appropriate attribution and citation. Redistribution, relicensing, commercial use, incorporation into commercial products, or representation of APAURA or derivative versions as independent original work is not permitted without prior written permission.
+
+See [LICENSE](LICENSE) for the complete terms.
