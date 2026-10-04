@@ -2,6 +2,8 @@
 
 **APAURA — Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis**
 
+<img width="1672" height="941" alt="APAURA_Infographics" src="https://github.com/user-attachments/assets/0aa4d0b5-82f3-4547-b80c-ec4ffab60839" />
+
 APAURA is a Java toolkit for detecting, quantifying, classifying, and visualizing alternative polyadenylation (APA) from multiple RNA-sequencing data types.
 
 **Current version:** `0.10.1`
@@ -83,13 +85,7 @@ MUT_3\tMUT\t/path/MUT_3.bam
 ```
 
 ```bash
-java -jar APAURA.jar short-read \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --control WT \
-  --case MUT \
-  --library reverse \
-  --out apaura_results
+java -jar APAURA.jar short-read --samples samples.tsv --gtf annotation.gtf --control WT --case MUT --library reverse --out apaura_results
 ```
 
 For replicated short-read studies, APAURA evaluates biological replicate support before inferential testing. Sparse replicated events are not rescued by pooled Fisher testing.
@@ -99,12 +95,7 @@ See [docs/TUTORIAL_SHORT_READ.md](docs/TUTORIAL_SHORT_READ.md).
 ## Direct RNA / true 3′-end quick start
 
 ```bash
-java -jar APAURA.jar run-direct \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --control control \
-  --case treated \
-  --out direct_results
+java -jar APAURA.jar run-direct --samples samples.tsv --gtf annotation.gtf --control control --case treated --out direct_results
 ```
 
 Use `--cluster-distance 0` to preserve exact single-nucleotide cleavage coordinates.
@@ -114,12 +105,7 @@ See [docs/TUTORIAL_DIRECT_RNA.md](docs/TUTORIAL_DIRECT_RNA.md).
 ## IsoQuant quick start
 
 ```bash
-java -jar APAURA.jar run-isoquant \
-  --samples isoquant_samples.tsv \
-  --gtf annotation.gtf \
-  --control control \
-  --case treated \
-  --out isoquant_results
+java -jar APAURA.jar run-isoquant --samples isoquant_samples.tsv --gtf annotation.gtf --control control --case treated --out isoquant_results
 ```
 
 See [docs/TUTORIAL_ISOQUANT.md](docs/TUTORIAL_ISOQUANT.md).
@@ -127,31 +113,13 @@ See [docs/TUTORIAL_ISOQUANT.md](docs/TUTORIAL_ISOQUANT.md).
 ## Plot a locus
 
 ```bash
-java -jar APAURA.jar plot-region \
-  --results apaura_results \
-  --gene CD44 \
-  --mode short-read \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --control WT \
-  --case MUT \
-  --library reverse \
-  --format all
+java -jar APAURA.jar plot-region --results apaura_results --gene CD44 --mode short-read --samples samples.tsv --gtf annotation.gtf --control WT --case MUT --library reverse --format all
 ```
 
 Multiple genes:
 
 ```bash
-java -jar APAURA.jar plot-region \
-  --results apaura_results \
-  --gene CD44,SF3B1,TIMP4,TCL1A \
-  --mode short-read \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --control WT \
-  --case MUT \
-  --library reverse \
-  --format pdf
+java -jar APAURA.jar plot-region --results apaura_results --gene CD44,SF3B1,TIMP4,TCL1A --mode short-read --samples samples.tsv  --gtf annotation.gtf --control WT --case MUT --library reverse --format pdf
 ```
 
 Or:
@@ -167,12 +135,7 @@ See [docs/TUTORIAL_PLOT_REGION.md](docs/TUTORIAL_PLOT_REGION.md).
 ## RBP motif enrichment
 
 ```bash
-java -jar APAURA.jar rbp-enrich \
-  --sites apaura_results/apa_sites.tsv \
-  --genes apaura_results/apa.tsv \
-  --fasta genome.fa \
-  --motifs rbp_motifs.meme \
-  --out rbp_results
+java -jar APAURA.jar rbp-enrich --sites apaura_results/apa_sites.tsv --genes apaura_results/apa.tsv --fasta genome.fa --motifs rbp_motifs.meme --out rbp_results
 ```
 
 Motif enrichment identifies candidate sequence-level regulatory associations; it does not prove direct binding or causality.
