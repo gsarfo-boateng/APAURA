@@ -1,70 +1,102 @@
 # APAURA
 
-**APAURA — Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis** is a Java toolkit for detecting and characterizing alternative polyadenylation (APA) changes from RNA-sequencing data.
+**APAURA — Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis**
 
-Version: **0.10.1**
+APAURA is a Java toolkit for detecting, quantifying, classifying, and visualizing alternative polyadenylation (APA) from multiple RNA-sequencing data types.
 
-APAURA follows the biological workflow:
+**Current version:** `0.10.1`
+
+APAURA follows the biological hierarchy:
 
 ```text
 PAS -> PAU -> APA architecture/change -> candidate RBP regulators
 ```
 
-It uses different evidence models for long-read/true 3'-end data and conventional short-read RNA-seq, then reports results through a common APA framework.
+It uses different evidence models for conventional short-read RNA-seq, direct/true 3′-end data, and IsoQuant-corrected long reads, while reporting results through a common APA framework.
 
-## APA model
+## Features
 
-APAURA separates three concepts:
+- conventional short-read RNA-seq using annotated terminal-exon coverage;
+- direct RNA / true 3′-end aligned-read analysis;
+- IsoQuant-corrected long-read analysis;
+- tandem 3′UTR APA (TUTR);
+- alternative terminal-exon architecture (ALE);
+- intronic polyadenylation (IPA);
+- replicate-aware differential testing;
+- publication-style locus plotting;
+- multi-gene locus plotting;
+- persistent plotting normalization cache;
+- RBP motif enrichment around regulated PAS and ALE acceptors.
 
-1. **PAS region** — where an individual poly(A) site occurs.
-2. **APA architecture** — how terminal exons and terminal PAS are organized within a gene.
-3. **APA direction** — how usage changes between conditions.
-
-### PAS regions
-
-Site-level `region` values are:
-
-```text
-3UTR
-terminal_exon_noncoding
-coding_exon
-noncoding_exon
-intron
-downstream
-intergenic
-```
-
-### Terminal APA architecture
-
-Gene-level `apa_architecture` values are:
+## Main commands
 
 ```text
-TUTR    multiple PAS within the same terminal-exon branch
-ALE     alternative terminal-exon branches
-mixed   both TUTR and ALE architecture
-none    neither TUTR nor ALE is identified
+ends          Extract transcript-oriented aligned 3′ ends
+run-direct    Direct RNA / true 3′-end APA analysis
+run-isoquant  IsoQuant corrected-read APA analysis
+short-read    Conventional RNA-seq annotated APA analysis
+run-short     Alias for short-read
+plot-region   Publication-style locus plots
+rbp-enrich    RBP motif enrichment
+citation      Print software citation
+version       Print version
 ```
 
-Intronic polyadenylation (IPA) is tracked separately rather than treated as a terminal-exon architecture.
+```bash
+java -jar APAURA.jar --help
+java -jar APAURA.jar short-read --help
+java -jar APAURA.jar plot-region --help
+```
 
-### Direction of change
+## Installation
 
-Examples include:
+```bash
+git clone <YOUR-APAURA-REPOSITORY-URL>
+cd APAURA
+mvn clean package
+./build.sh
+```
+
+Verify the final JAR:
+
+```bash
+java -jar APAURA.jar --version
+java -jar APAURA.jar short-read --help
+java -jar APAURA.jar plot-region --help
+jar tf APAURA.jar | grep 'org/apaura/stats/MultipleTesting.class'
+```
+
+See [docs/INSTALLATION.md](docs/INSTALLATION.md).
+
+## Short-read quick start
+
+Sample sheet:
 
 ```text
-TUTR -> shortening / lengthening
-ALE  -> proximal_switch / distal_switch
-IPA  -> gain / loss
-mixed or multi-mechanism change -> complex
+sample\tcondition\tbam
+WT_1\tWT\t/path/WT_1.bam
+WT_2\tWT\t/path/WT_2.bam
+WT_3\tWT\t/path/WT_3.bam
+MUT_1\tMUT\t/path/MUT_1.bam
+MUT_2\tMUT\t/path/MUT_2.bam
+MUT_3\tMUT\t/path/MUT_3.bam
 ```
 
-Mechanism-specific columns (`tutr_direction`, `ale_direction`, `ipa_direction`) preserve simultaneous changes within the same gene.
+```bash
+java -jar APAURA.jar short-read \
+  --samples samples.tsv \
+  --gtf annotation.gtf \
+  --control WT \
+  --case MUT \
+  --library reverse \
+  --out apaura_results
+```
 
-## Supported analysis modes
+For replicated short-read studies, APAURA evaluates biological replicate support before inferential testing. Sparse replicated events are not rescued by pooled Fisher testing.
 
-### Direct RNA / true 3'-end evidence
+See [docs/TUTORIAL_SHORT_READ.md](docs/TUTORIAL_SHORT_READ.md).
 
-Use `run-direct` for BAM/SAM data in which the transcript-oriented aligned 3' end is meaningful, including Nanopore direct RNA and suitable 3'-end-enriched assays.
+## Direct RNA / true 3′-end quick start
 
 ```bash
 java -jar APAURA.jar run-direct \
@@ -72,16 +104,14 @@ java -jar APAURA.jar run-direct \
   --gtf annotation.gtf \
   --control control \
   --case treated \
-  --out results
+  --out direct_results
 ```
 
-To preserve exact single-nucleotide cleavage coordinates:
+Use `--cluster-distance 0` to preserve exact single-nucleotide cleavage coordinates.
 
-```bash
---cluster-distance 0
-```
+See [docs/TUTORIAL_DIRECT_RNA.md](docs/TUTORIAL_DIRECT_RNA.md).
 
-### IsoQuant corrected reads
+## IsoQuant quick start
 
 ```bash
 java -jar APAURA.jar run-isoquant \
@@ -89,251 +119,173 @@ java -jar APAURA.jar run-isoquant \
   --gtf annotation.gtf \
   --control control \
   --case treated \
-  --out results
+  --out isoquant_results
 ```
 
-### Conventional short-read RNA-seq
+See [docs/TUTORIAL_ISOQUANT.md](docs/TUTORIAL_ISOQUANT.md).
+
+## Plot a locus
 
 ```bash
-java -jar APAURA.jar short-read \
+java -jar APAURA.jar plot-region \
+  --results apaura_results \
+  --gene CD44 \
+  --mode short-read \
   --samples samples.tsv \
   --gtf annotation.gtf \
-  --control control \
-  --case treated \
-  --library unstranded \
-  --out results
+  --control WT \
+  --case MUT \
+  --library reverse \
+  --format all
 ```
 
-Short-read endpoints are not treated as cleavage sites. APAURA uses CIGAR-aware terminal-exon coverage and annotated PAS structure to estimate tandem-PAS usage.
+Multiple genes:
 
-### RBP motif enrichment
+```bash
+java -jar APAURA.jar plot-region \
+  --results apaura_results \
+  --gene CD44,SF3B1,TIMP4,TCL1A \
+  --mode short-read \
+  --samples samples.tsv \
+  --gtf annotation.gtf \
+  --control WT \
+  --case MUT \
+  --library reverse \
+  --format pdf
+```
+
+Or:
+
+```bash
+--genes-file genes.txt
+```
+
+For stranded short-read data, coverage is transcript-strand aware. Genomic x-coordinates remain left-to-right. Negative-strand coverage can be mirrored vertically for display. APAURA caches normalization totals in `plot_normalization.tsv`, so later plots can avoid rescanning entire BAM files.
+
+See [docs/TUTORIAL_PLOT_REGION.md](docs/TUTORIAL_PLOT_REGION.md).
+
+## RBP motif enrichment
 
 ```bash
 java -jar APAURA.jar rbp-enrich \
-  --sites results/apa_sites.tsv \
-  --genes results/apa.tsv \
+  --sites apaura_results/apa_sites.tsv \
+  --genes apaura_results/apa.tsv \
   --fasta genome.fa \
   --motifs rbp_motifs.meme \
   --out rbp_results
 ```
 
-The RBP module analyzes motif enrichment around regulated PAS and, for ALE events, terminal-exon splice acceptors. Results are candidate regulatory associations, not proof of direct binding or causality.
+Motif enrichment identifies candidate sequence-level regulatory associations; it does not prove direct binding or causality.
 
-## Sample sheets
-
-Direct/short-read example:
-
-```text
-sample	condition	bam
-CTL_1	control	/path/CTL_1.bam
-CTL_2	control	/path/CTL_2.bam
-TRT_1	treated	/path/TRT_1.bam
-TRT_2	treated	/path/TRT_2.bam
-```
-
-Accepted path columns are `bam`, `file`, and `path`. Relative paths are resolved relative to the sample sheet.
-
-IsoQuant example:
-
-```text
-sample	condition	isoquant_dir
-CTL_1	control	/path/CTL_1_isoquant
-CTL_2	control	/path/CTL_2_isoquant
-TRT_1	treated	/path/TRT_1_isoquant
-TRT_2	treated	/path/TRT_2_isoquant
-```
-
-## Core outputs
-
-Long-read/direct analyses produce:
-
-```text
-pas_all.bed        PAS before support filtering
-pas.bed            retained representative PAS
-pas_counts.tsv     PAS counts by sample
-pau.tsv            per-sample poly(A)-site usage
-apa_sites.tsv      PAS-level differential results
-apa.tsv            main gene-level APA results
-apa_architecture.tsv
-run_info.txt
-```
-
-The short-read engine produces analogous PAS/PAU/APA tables based on annotated terminal-exon coverage.
-
-RBP analysis produces:
-
-```text
-rbp.tsv
-rbp_hits.tsv
-rbp_profile.tsv
-rbp_windows.tsv
-rbp_run_info.txt
-```
-
-See `docs/OUTPUT_SCHEMA.md` for column definitions.
+See [docs/TUTORIAL_RBP_ENRICHMENT.md](docs/TUTORIAL_RBP_ENRICHMENT.md).
 
 ## Core quantities
 
-For poly(A) site `k` in gene `g`, sample `s`:
-
 ```text
 PAU_gks = C_gks / sum_j C_gjs
-```
 
-Site-level change:
-
-```text
 delta_PAU = mean(PAU_case) - mean(PAU_control)
-```
 
-Sites are ordered proximal-to-distal in transcript orientation and assigned normalized positions `x_k` from 0 to 1:
-
-```text
 WPI = sum_k PAU_k * x_k
-```
 
-Therefore:
-
-```text
 delta_WPI > 0 -> distal movement
 delta_WPI < 0 -> proximal movement
-```
 
-The overall PAS-usage difference is summarized by total-variation distance:
-
-```text
 APD = 0.5 * sum_k |PAU_case,k - PAU_control,k|
 ```
 
-APAURA also reports architecture-specific metrics for ALE switching, TUTR shifts, IPA usage, and termination-compartment changes. See `docs/ARCHITECTURE_MODEL.md` and `docs/ALGORITHM.md`.
+A gene can show substantial PAS redistribution while `delta_WPI` remains near zero. APAURA therefore separates overall change from net positional direction.
 
-## Statistical methods
-
-Depending on the analysis and available replication, APAURA uses:
-
-- beta-binomial likelihood-ratio testing for PAS usage;
-- Fisher's exact test when replicate-aware fitting is not available;
-- Benjamini-Hochberg FDR correction;
-- a tie-aware two-sample ECDF maximum-distance statistic at gene level;
-- total-variation distance and Jensen-Shannon divergence for distributional summaries;
-- weighted isotonic regression for short-read coverage deconvolution.
-
-## Help
-
-Global help:
-
-```bash
-java -jar APAURA.jar --help
-```
-
-Command-specific help:
-
-```bash
-java -jar APAURA.jar run-direct --help
-java -jar APAURA.jar run-isoquant --help
-java -jar APAURA.jar short-read --help
-java -jar APAURA.jar rbp-enrich --help
-java -jar APAURA.jar ends --help
-```
-
-## Building from source
-
-APAURA targets Java 8-compatible bytecode. JDK 17 or 21 can be used for development.
-
-With Maven:
-
-```bash
-mvn clean package
-```
-
-This runs the JUnit test suite and creates:
+## Architecture
 
 ```text
-target/APAURA.jar
+TUTR   tandem PAS within a terminal-exon branch
+ALE    alternative terminal-exon branches
+mixed  both TUTR and ALE architecture
+none   no terminal architecture assigned
 ```
 
-The portable helper can also be used:
+IPA is tracked separately from terminal architecture.
 
-```bash
-./build.sh
-```
+## Replicate-aware inference
 
-If Maven is available, it runs the Maven build. Otherwise it compiles the main source directly with `javac` and `jar`.
+For replicated short-read experiments:
 
-## Testing
+- supported events use beta-binomial testing;
+- genuine 1-vs-1 experiments can use Fisher's exact test;
+- sparse replicated experiments are not rescued by pooled Fisher testing;
+- BH correction is applied to valid finite p-values;
+- unavailable inferential values are written as `NA`.
 
-### Unit tests
-
-JUnit tests for the mathematical and low-level core live in:
+Key statuses:
 
 ```text
-src/test/java/org/apaura/
+ok
+insufficient_replicate_support
+insufficient_evidence
 ```
 
-Run them with:
-
-```bash
-mvn test
-```
-
-### End-to-end synthetic regression tests
-
-```bash
-./tests/run_tests.sh
-```
-
-The integration suite covers direct-RNA/SAM, BAM parsing, IsoQuant, short-read coverage analysis, TUTR, ALE, IPA, mixed mechanisms, and RBP motif enrichment.
-
-## Alignment readers
-
-APAURA contains small sequential SAM/BAM/BGZF readers so the core JAR can remain dependency-light. The BAM reader extracts only fields required by APAURA and does not implement random access or the complete BAM optional-tag API. See `docs/DEVELOPMENT.md` for scope and maintenance notes.
-
-## Plotting
-
-The companion R script is:
+## Compact short-read outputs
 
 ```text
-scripts/plot_apaura.R
+pas.tsv
+apa_architecture.tsv
+apa_sites.tsv
+apa.tsv
+ipa_annotation.tsv
+ipa_sites.tsv
+ipa.tsv
+apaura_run.tsv        # when run metadata is enabled
 ```
 
-Example:
+Optional larger outputs:
 
-```bash
-Rscript scripts/plot_apaura.R \
-  --input results \
-  --rbp rbp_results \
-  --out results/figures
+```text
+pau.tsv               # --write-per-sample
+ipa_usage.tsv         # --write-per-sample
+pas_coverage.tsv      # --write-diagnostics
 ```
 
-See `docs/PLOTTING.md`.
-
-## Current boundaries
-
-Version 0.10.1 does not yet treat conventional fragmented RNA-seq as direct cleavage-site evidence, perform de novo short-read PAS breakpoint discovery, or claim complete short-read ALE/IPA quantification. Internal-priming filtering is also not yet implemented.
+See [docs/OUTPUT_SCHEMA.md](docs/OUTPUT_SCHEMA.md).
 
 ## Documentation
 
-```text
-docs/ALGORITHM.md
-docs/ARCHITECTURE_MODEL.md
-docs/LONG_READ_ALGORITHM.md
-docs/SHORT_READ_ALGORITHM.md
-docs/RBP_ENRICHMENT.md
-docs/OUTPUT_SCHEMA.md
-docs/PLOTTING.md
-docs/VALIDATION.md
-docs/DEVELOPMENT.md
+- [Installation](docs/INSTALLATION.md)
+- [Quick start](docs/QUICKSTART.md)
+- [Short-read tutorial](docs/TUTORIAL_SHORT_READ.md)
+- [Direct RNA tutorial](docs/TUTORIAL_DIRECT_RNA.md)
+- [IsoQuant tutorial](docs/TUTORIAL_ISOQUANT.md)
+- [Plot-region tutorial](docs/TUTORIAL_PLOT_REGION.md)
+- [RBP enrichment tutorial](docs/TUTORIAL_RBP_ENRICHMENT.md)
+- [Batch comparisons](docs/TUTORIAL_BATCH_COMPARISONS.md)
+- [Algorithm](docs/ALGORITHM.md)
+- [Architecture model](docs/ARCHITECTURE_MODEL.md)
+- [Output schema](docs/OUTPUT_SCHEMA.md)
+- [Strandedness](docs/STRANDEDNESS.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Development](docs/DEVELOPMENT.md)
+- [Validation](docs/VALIDATION.md)
+- [Release checklist](docs/RELEASE_CHECKLIST.md)
+
+## Testing
+
+```bash
+mvn clean package
+./build.sh
+./tests/run_tests.sh
 ```
 
-Additional method-positioning and implementation notes are available under `docs/` for developers and reviewers.
+## Current boundaries
+
+For conventional fragmented short-read RNA-seq, aligned read ends are not treated as direct cleavage sites. Short-read PAS inference is annotation/coverage based.
+
+RBP motif enrichment is associative and should not be interpreted as direct binding evidence without orthogonal validation.
 
 ## Citation
 
 ```bash
 java -jar APAURA.jar --citation
 ```
-
-Current software citation:
 
 > Boateng-Sarfo G. APAURA: Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis. Version 0.10.1, 2026.
 

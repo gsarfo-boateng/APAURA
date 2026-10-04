@@ -1,34 +1,40 @@
 # Changelog
 
-## 0.10.1
+## Unreleased
 
-### Added
+### Plotting
 
-- `rbp-enrich` command for architecture-aware RBP motif enrichment.
-- Generic MEME PWM parser and Java log2-odds motif scanner.
-- Transcript-oriented FASTA extraction with reverse-complement handling on negative-strand genes.
-- `.fai` random-access FASTA support for large uncompressed genomes, with unindexed FASTA fallback.
-- Mechanism-specific RBP strata for TUTR shortening/lengthening, ALE proximal/distal switching, and IPA gain/loss.
-- ALE analysis at both terminal PAS and terminal-exon splice-acceptor windows.
-- GC-matched stable-site background selection with transparent non-foreground fallback.
-- One-sided Fisher enrichment testing, BH FDR, label-permutation enrichment P values and permutation FDR.
-- Site-level motif-hit output and transcript-relative positional motif profiles.
-- Synthetic RBP-enrichment truth test with a planted motif.
+- Strand-aware short-read locus coverage for forward/reverse paired-end libraries.
+- Genomic x coordinates preserved for negative-strand genes.
+- Optional negative-strand coverage mirroring as a display convention.
+- Persistent `plot_normalization.tsv` cache.
+- Multiple-gene plotting through comma-separated `--gene` and `--genes-file`.
+- Condition-specific replicate faceting.
+- Optional transcript-level gene models.
 
-### Preserved
+### Documentation
 
-- Long-read/direct-RNA PAS analysis.
-- IsoQuant corrected-read support.
-- Conventional STAR/BWA-style coverage-based TUTR analysis.
-- TUTR/ALE/mixed terminal architecture model and separate IPA mechanism.
+- Reworked README and tutorials.
+- Added validation and release checklists.
 
-### Maintenance
+## 0.10.1 — 2026
 
-- Reformatted the Java source into conventional readable style without changing analysis behavior.
-- Added descriptive helper methods and technical Javadocs around statistical, BAM/BGZF, and APA-analysis code.
-- Added JUnit tests for core statistical and parsing routines.
-- Added development documentation and stricter ignore rules for generated/macOS metadata files.
+### Short-read APA
 
-### Interpretation
+- Replicate-aware site testing.
+- Minimum informative-replicate support.
+- No pooled Fisher fallback for sparse replicated experiments.
+- Fisher retained for genuine 1-vs-1 comparisons.
+- Explicit `insufficient_replicate_support` and `insufficient_evidence` statuses.
+- Separate observed and inferential APA direction.
+- PAU/WPI SD fields.
+- Compact default outputs with optional per-sample/diagnostic tables.
 
-The RBP module prioritizes candidate regulators from sequence enrichment. Motif evidence is not presented as proof of RBP binding or causality.
+### IPA
+
+- Replicate-support accounting in short-read IPA testing.
+- Compact IPA event output with replicate-support fields.
+
+### RBP
+
+- Motif enrichment around regulated PAS and ALE splice acceptors.

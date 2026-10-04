@@ -1,0 +1,5 @@
+sample	condition	isoquant_dir
+C1	control	/path/C1_isoquant
+C2	control	/path/C2_isoquant
+T1	treated	/path/T1_isoquant
+T2	treated	/path/T2_isoquant
