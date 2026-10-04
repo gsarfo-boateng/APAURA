@@ -1,0 +1,1 @@
+ipa_id	gene_id	gene_name	biotype	chrom	strand	intron_start0	intron_end0	representative_pas_1based	n_annotated_ipa_pas	annotated_ipa_positions_1based	control_ipa_usage	case_ipa_usage	delta_ipa_usage	control_evidence	case_evidence	pvalue	fdr	dispersion_rho	ipa_direction	method	status

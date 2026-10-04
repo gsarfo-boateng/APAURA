@@ -1,0 +1,3 @@
+site_id	chrom	pos0	strand	gene_id	gene_name	region	control1	control2	treated1	treated2
+PAS0000001	chr1	699	+	GENE1	DemoGene	3UTR	8	10	32	30
+PAS0000002	chr1	899	+	GENE1	DemoGene	3UTR	32	30	8	10

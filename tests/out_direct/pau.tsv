@@ -1,0 +1,9 @@
+sample	condition	site_id	gene_id	gene_name	chrom	pos0	strand	region	site_rank	count	gene_end_count	pau
+CTL_1	control	PAS0000001	GENE1	DemoGene	chr1	699	+	3UTR	1	8	40	0.20000000
+CTL_2	control	PAS0000001	GENE1	DemoGene	chr1	699	+	3UTR	1	10	40	0.25000000
+TRT_1	treated	PAS0000001	GENE1	DemoGene	chr1	699	+	3UTR	1	32	40	0.80000000
+TRT_2	treated	PAS0000001	GENE1	DemoGene	chr1	699	+	3UTR	1	30	40	0.75000000
+CTL_1	control	PAS0000002	GENE1	DemoGene	chr1	899	+	3UTR	2	32	40	0.80000000
+CTL_2	control	PAS0000002	GENE1	DemoGene	chr1	899	+	3UTR	2	30	40	0.75000000
+TRT_1	treated	PAS0000002	GENE1	DemoGene	chr1	899	+	3UTR	2	8	40	0.20000000
+TRT_2	treated	PAS0000002	GENE1	DemoGene	chr1	899	+	3UTR	2	10	40	0.25000000
