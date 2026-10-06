@@ -8,9 +8,9 @@
 
 APAURA is a Java toolkit for detecting, quantifying, classifying, and visualizing alternative polyadenylation (APA) from RNA-sequencing data. It supports true 3'-end/direct-RNA evidence, IsoQuant corrected reads, conventional short-read RNA-seq, RNA-binding-protein motif enrichment, and publication-style locus visualization.
 
-**Version:** `0.10.1`
 
 <img width="1672" height="941" alt="APAURA_Infographics" src="https://github.com/user-attachments/assets/114809f5-754e-42f4-98a3-981b48a50f03" />
+**Version:** `0.10.1`
 
 > If you use APAURA, please cite:
 >
