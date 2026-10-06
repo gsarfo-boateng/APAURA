@@ -1,0 +1,5 @@
+sample	condition	bam
+control1	control	control1.bam
+control2	control	control2.bam
+treated1	treated	treated1.bam
+treated2	treated	treated2.bam

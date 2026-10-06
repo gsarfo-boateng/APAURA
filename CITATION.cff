@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use APAURA, please cite this software."
+title: "APAURA: Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis"
+type: software
+authors:
+  - family-names: "Boateng-Sarfo"
+    given-names: "George"
+version: "0.10.1"
+date-released: "2026-10-03"
