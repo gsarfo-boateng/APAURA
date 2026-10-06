@@ -1,3 +1,3 @@
-group_id	gene_id	gene_name	biotype	scope	site_id	chrom	pas_position_1based	strand	site_rank	normalized_position	control_pau	case_pau	delta_pau	control_pau_sd	case_pau_sd	control_n_total	case_n_total	control_n_any_evidence	case_n_any_evidence	control_n_informative	case_n_informative	control_evidence	case_evidence	pvalue	fdr	method	status
-GAPA1|TE001	GAPA1	ApaDemo	protein_coding	TANDEM_3UTR	GAPA1|TE001|PAS1	chr1	200	+	1	0.000000	0.26500000	0.73500000	0.47000000	0.02121320	0.02121320	2	2	2	2	2	2	200	200	NA	NA	not_tested	insufficient_replicate_support
-GAPA1|TE001	GAPA1	ApaDemo	protein_coding	TANDEM_3UTR	GAPA1|TE001|PAS2	chr1	300	+	2	1.000000	0.73500000	0.26500000	-0.47000000	0.02121320	0.02121320	2	2	2	2	2	2	200	200	NA	NA	not_tested	insufficient_replicate_support
+group_id	gene_id	gene_name	chrom	strand	site_id	pas_position_1based	site_rank	control_pau	case_pau	delta_pau	pvalue	fdr	status
+GAPA1|TE001	GAPA1	ApaDemo	chr1	+	GAPA1|TE001|PAS1	200	1	0.26500000	0.73500000	0.47000000	6.587379369e-05	6.587379369e-05	ok
+GAPA1|TE001	GAPA1	ApaDemo	chr1	+	GAPA1|TE001|PAS2	300	2	0.73500000	0.26500000	-0.47000000	6.587379369e-05	6.587379369e-05	ok

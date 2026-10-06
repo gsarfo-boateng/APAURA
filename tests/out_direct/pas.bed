@@ -1,3 +1,3 @@
 #chrom	start	end	site_id	total_count	strand	cluster_start	cluster_end	gene_id	gene_name	biotype	region	architecture_role	terminal_exon	terminal_exon_anchor0	terminal_branch_rank	site_rank	normalized_position
-chr1	699	700	PAS0000001	80	+	699	700	GENE1	DemoGene	protein_coding	3UTR	TUTR	true	100	1	1	0.000000
-chr1	899	900	PAS0000002	80	+	899	900	GENE1	DemoGene	protein_coding	3UTR	TUTR	true	100	1	2	1.000000
+chr1	699	700	PAS0000001	80	+	699	700	GENE1	GENE1	protein_coding	terminal_exon_noncoding	TUTR	true	599	1	1	0.000000
+chr1	899	900	PAS0000002	80	+	899	900	GENE1	GENE1	protein_coding	terminal_exon_noncoding	TUTR	true	599	1	2	1.000000

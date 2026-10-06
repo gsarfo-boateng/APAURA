@@ -1,0 +1,14 @@
+APAURA RBP motif enrichment
+motifs=3
+foreground_targets=12
+stable_background_candidates=24
+normalized_motif_score_threshold=0.8
+background_ratio=2
+permutations=200
+seed=7
+pas_window=-20..+10
+ale_acceptor_window=-200..+100
+site_fdr=0.05
+min_abs_delta_pau=0.1
+motif_scanner=independent PWM log2-odds scanner; RNA U is treated as T
+enrichment_test=one-sided Fisher exact test plus label-permutation enrichment test

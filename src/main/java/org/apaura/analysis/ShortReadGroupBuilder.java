@@ -70,11 +70,13 @@ public final class ShortReadGroupBuilder {
         int skippedNonQuantifiableFamilies = 0;
 
         for (List<TranscriptModel> geneTranscripts : transcriptsByGene.values()) {
-            List<TranscriptModel> terminalTranscripts =
-                    ShortReadIpa.terminalArchitectureTranscripts(geneTranscripts);
-            TerminalFamilyReconciler.Result reconciliation =
+            /* Preserve the validated TUTR transcript/event universe.
+             * IPA-aware transcript filtering belongs to ArchitectureCatalog,
+             * ShortReadAle and ShortReadIpa, not ShortReadGroupBuilder.
+             */
+TerminalFamilyReconciler.Result reconciliation =
                     TerminalFamilyReconciler.reconcile(
-                            terminalTranscripts,
+                                                geneTranscripts,
                             anchorTolerance,
                             pasMergeDistance
                     );

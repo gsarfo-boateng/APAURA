@@ -45,8 +45,25 @@ java -jar APAURA.jar short-read \
   --gtf examples/shortread/mini_shortread.gtf \
   --control control --case treated \
   --min-sample-evidence 10 \
+  --min-informative-replicates 2 \
+  --write-diagnostics \
   --out tests/out_short_sam
-grep -q $'TUTR\tyes\tshortening\tTUTR:shortening' tests/out_short_sam/apa.tsv
+awk -F'\t' '
+  NR==1 {for(i=1;i<=NF;i++) c[$i]=i; next}
+  $(c["apa_architecture"])=="TUTR" &&
+  $(c["tutr_change"])=="yes" &&
+  $(c["tutr_direction"])=="shortening" &&
+  $(c["changed_mechanisms"])=="TUTR" {ok=1}
+  END {exit !ok}
+' tests/out_short_sam/apa.tsv
+test -s tests/out_short_sam/apa_events.tsv
+test -s tests/out_short_sam/apa_sites.tsv
+test -s tests/out_short_sam/details/apa_architecture.tsv
+test -s tests/out_short_sam/details/apa_full.tsv
+test -s tests/out_short_sam/details/apa_events_full.tsv
+test -s tests/out_short_sam/details/apa_sites_full.tsv
+! head -1 tests/out_short_sam/apa.tsv | grep -q 'n_tutr_groups'
+head -1 tests/out_short_sam/apa.tsv | grep -q 'min_mechanism_fdr'
 
 # Same engine through the internal BAM parser
 java -jar APAURA.jar short-read \
@@ -54,9 +71,19 @@ java -jar APAURA.jar short-read \
   --gtf examples/shortread/mini_shortread.gtf \
   --control control --case treated \
   --min-sample-evidence 10 \
+  --min-informative-replicates 2 \
+  --write-diagnostics \
   --out tests/out_short_bam
-grep -q $'TUTR\tyes\tshortening\tTUTR:shortening' tests/out_short_bam/apa.tsv
+awk -F'\t' '
+  NR==1 {for(i=1;i<=NF;i++) c[$i]=i; next}
+  $(c["apa_architecture"])=="TUTR" &&
+  $(c["tutr_change"])=="yes" &&
+  $(c["tutr_direction"])=="shortening" &&
+  $(c["changed_mechanisms"])=="TUTR" {ok=1}
+  END {exit !ok}
+' tests/out_short_bam/apa.tsv
 cmp tests/out_short_sam/apa.tsv tests/out_short_bam/apa.tsv
+cmp tests/out_short_sam/apa_events.tsv tests/out_short_bam/apa_events.tsv
 cmp tests/out_short_sam/apa_sites.tsv tests/out_short_bam/apa_sites.tsv
 
 

@@ -1,0 +1,1 @@
+gene_id	gene_name	biotype	chrom	strand	n_terminal_branches	control_ale_wpi	case_ale_wpi	delta_ale_wpi	control_ale_wpi_sd	case_ale_wpi_sd	ale_switch_index	ale_min_pvalue	ale_min_fdr	control_n_total	case_n_total	control_n_any_evidence	case_n_any_evidence	control_n_informative	case_n_informative	ale_change	observed_ale_direction	ale_direction	status

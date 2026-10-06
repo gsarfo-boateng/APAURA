@@ -4,9 +4,11 @@ import org.apaura.util.Args;
 import org.apaura.util.RunMetadata;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -31,18 +33,33 @@ public final class PlotRegionCommand {
     }
 
     public static void run(Args args) throws Exception {
+        String resultsArg =
+                args.get("results", "");
 
-        File results = new File(
-                args.require("results")
-        ).getCanonicalFile();
+        boolean standalone =
+                isEmpty(resultsArg);
 
-        if (!results.isDirectory()) {
-            throw new IllegalArgumentException(
-                    "Result directory not found: " + results
-            );
+        File results = null;
+
+        Map<String, String> metadata =
+                java.util.Collections.emptyMap();
+
+        if (!standalone) {
+
+            results = new File(
+                    resultsArg
+            ).getCanonicalFile();
+
+            if (!results.isDirectory()) {
+                throw new IllegalArgumentException(
+                        "Result directory not found: " + results
+                );
+            }
+
+            metadata =
+                    RunMetadata.read(results);
         }
 
-        Map<String, String> metadata = RunMetadata.read(results);
 
         // ----------------------------------------------------
         // Resolve run information
@@ -54,10 +71,22 @@ public final class PlotRegionCommand {
         );
 
         if (isEmpty(mode)) {
-            mode = detectMode(results);
+            mode = standalone
+                    ? "short-read"
+                    : detectMode(results);
         }
 
         mode = normalizeMode(mode);
+
+        if (standalone &&
+                !"short-read".equals(mode)) {
+
+            throw new IllegalArgumentException(
+                    "Standalone plot-region currently supports "
+                            + "short-read BAM/SAM coverage only. "
+                            + "Use --results for run-direct/run-isoquant."
+            );
+        }
 
         String samples = firstNonEmpty(
                 args.get("samples", ""),
@@ -163,6 +192,9 @@ public final class PlotRegionCommand {
 
         System.err.println(
                 "[APAURA] plot-region mode=" + mode
+                        + (standalone
+                            ? " standalone=true"
+                            : "")
                         + " targets=" + targets.size()
                         + " library=" + library
         );
@@ -259,7 +291,7 @@ public final class PlotRegionCommand {
             String outArg = args.get("out", "");
 
             File outDir = isEmpty(outArg)
-                    ? new File(results, "plots")
+                    ? defaultPlotDirectory(results)
                     : new File(outArg);
 
             outDir = outDir.getCanonicalFile();
@@ -286,7 +318,7 @@ public final class PlotRegionCommand {
         } else {
 
             String defaultOut = new File(
-                    new File(results, "plots"),
+                    defaultPlotDirectory(results),
                     sanitize(target) + ".APAURA"
             ).getPath();
 
@@ -311,6 +343,13 @@ public final class PlotRegionCommand {
         // R command
         // ----------------------------------------------------
 
+        File renderResults = results;
+
+        if (renderResults == null) {
+            renderResults =
+                    prepareStandaloneResults(outFile);
+        }
+
         List<String> command =
                 new ArrayList<String>();
 
@@ -318,7 +357,11 @@ public final class PlotRegionCommand {
         command.add(renderer.getAbsolutePath());
 
         add(command, "--mode", mode);
-        add(command, "--results-dir", results.getAbsolutePath());
+        add(command, "--results-dir", renderResults.getAbsolutePath());
+
+        if (results == null) {
+            command.add("--standalone");
+        }
         add(command, "--samples", sampleFile.getCanonicalPath());
         add(command, "--gtf", gtfFile.getCanonicalPath());
         add(command, "--control", control);
@@ -407,6 +450,12 @@ public final class PlotRegionCommand {
         if (args.flag("show-replicates")) {
             command.add("--show-replicates");
         }
+        if (args.flag("show-overview")) {
+            command.add("--show-overview");
+        }
+        if (args.flag("verbose")) {
+            command.add("--verbose");
+        }
 
         if (args.flag("no-ipa")) {
             command.add("--no-ipa");
@@ -465,6 +514,106 @@ public final class PlotRegionCommand {
     // ========================================================
     // Gene-list handling
     // ========================================================
+
+    private static File defaultPlotDirectory(
+            File results
+    ) throws IOException {
+
+        if (results != null) {
+            return new File(
+                    results,
+                    "plots"
+            ).getCanonicalFile();
+        }
+
+        return new File(
+                "plots"
+        ).getCanonicalFile();
+    }
+
+    /**
+     * Standalone plot-region reuses the existing renderer by supplying
+     * an empty APA site table plus a persistent normalization cache
+     * directory beside the requested plot output.
+     */
+    private static File prepareStandaloneResults(
+            File outFile
+    ) throws IOException {
+
+        File parent =
+                outFile.getParentFile();
+
+        if (parent == null) {
+            parent =
+                    new File(".")
+                            .getCanonicalFile();
+        }
+
+        File cacheDir =
+                new File(
+                        parent,
+                        ".apaura_plot_cache"
+                ).getCanonicalFile();
+
+        if (!cacheDir.exists() &&
+                !cacheDir.mkdirs()) {
+
+            throw new IOException(
+                    "Cannot create standalone plot cache: "
+                            + cacheDir
+            );
+        }
+
+        File apaSites =
+                new File(
+                        cacheDir,
+                        "apa_sites.tsv"
+                );
+
+        /*
+         * Always rewrite the tiny standalone APA table.
+         *
+         * A header-only TSV makes readr infer pas_position_1based as
+         * character, which breaks dplyr::between() against numeric
+         * genomic coordinates. One impossible placeholder row forces
+         * numeric inference while being guaranteed to disappear during
+         * chromosome filtering.
+         */
+        BufferedWriter writer =
+                new BufferedWriter(
+                        new FileWriter(apaSites)
+                );
+
+        try {
+
+            writer.write(
+                    "pas_position_1based\t"
+                            + "delta_pau\t"
+                            + "fdr\t"
+                            + "status\t"
+                            + "gene_id\t"
+                            + "gene_name\t"
+                            + "chrom"
+            );
+            writer.newLine();
+
+            writer.write(
+                    "0\t"
+                            + "0\t"
+                            + "1\t"
+                            + "standalone_placeholder\t"
+                            + ".\t"
+                            + ".\t"
+                            + "__APAURA_STANDALONE__"
+            );
+            writer.newLine();
+
+        } finally {
+            writer.close();
+        }
+
+        return cacheDir;
+    }
 
     private static List<String> parseGenes(
             String geneArg,
@@ -641,21 +790,15 @@ public final class PlotRegionCommand {
                 )
                         || new File(new File(results, "details"), "pas_coverage.tsv").isFile()
                         || new File(results, "pas_coverage.tsv").isFile()
-                        || (
-                                new File(results, "pas.tsv").isFile()
+                        || (new File(results, "pas.tsv").isFile()
                                         && new File(results, "apa_sites.tsv").isFile()
-                                        && new File(results, "apa.tsv").isFile()
-                        )
-        ) {
+                                        && new File(results, "apa.tsv").isFile())) {
             return "short-read";
         }
 
         // IsoQuant result metadata.
         File runInfo =
-                new File(
-                        results,
-                        "run_info.txt"
-                );
+                new File(results, "run_info.txt");
 
         if (runInfo.isFile()) {
 
