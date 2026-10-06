@@ -6,9 +6,11 @@
 [![Java](https://img.shields.io/badge/Java-8%2B-orange.svg)](#installation)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-APAURA is a Java toolkit for detecting, quantifying, classifying, and visualizing alternative polyadenylation (APA) from RNA-sequencing data. It supports true 3′-end/direct-RNA evidence, IsoQuant corrected reads, conventional short-read RNA-seq, RNA-binding-protein motif enrichment, and publication-style locus visualization.
+APAURA is a Java toolkit for detecting, quantifying, classifying, and visualizing alternative polyadenylation (APA) from RNA-sequencing data. It supports true 3'-end/direct-RNA evidence, IsoQuant corrected reads, conventional short-read RNA-seq, RNA-binding-protein motif enrichment, and publication-style locus visualization.
 
 **Version:** `0.10.1`
+
+<img width="1672" height="941" alt="APAURA_Infographics" src="https://github.com/user-attachments/assets/114809f5-754e-42f4-98a3-981b48a50f03" />
 
 > If you use APAURA, please cite:
 >
@@ -32,7 +34,7 @@ mechanism-specific differential APA
 candidate RBP regulators
 ```
 
-APAURA separates **terminal APA architecture** from **the mechanism that changes between conditions**. This allows tandem 3′ UTR APA (TUTR), alternative last exon usage (ALE), and intronic polyadenylation (IPA) to be represented without collapsing distinct biological processes into one proximal/distal score.
+APAURA separates **terminal APA architecture** from **the mechanism that changes between conditions**. This allows tandem 3' UTR APA (TUTR), alternative last exon usage (ALE), and intronic polyadenylation (IPA) to be represented without collapsing distinct biological processes into one proximal/distal score.
 
 ### Terminal APA architecture
 
@@ -62,7 +64,7 @@ Mechanism-specific columns such as `tutr_direction`, `ale_direction`, and `ipa_d
 
 | Task | Input | APAURA command |
 |---|---|---|
-| True 3′-end / direct RNA APA | BAM/SAM + GTF | `run-direct` |
+| True 3'-end / direct RNA APA | BAM/SAM + GTF | `run-direct` |
 | IsoQuant long-read APA | IsoQuant corrected reads + GTF | `run-isoquant` |
 | Conventional RNA-seq APA | BAM/SAM + GTF | `short-read` |
 | Publication locus plots | APAURA results or BAM/SAM + GTF | `plot-region` |
@@ -147,7 +149,7 @@ forward
 reverse
 ```
 
-### Direct RNA / true 3′-end evidence
+### Direct RNA / true 3'-end evidence
 
 ```bash
 java -jar APAURA.jar run-direct --samples samples.tsv --gtf annotation.gtf --control control --case treated --out results
@@ -216,7 +218,7 @@ java -jar APAURA.jar plot-region --results results --gene ABCD --samples samples
 Depending on the locus and analysis mode, the figure can include:
 
 - whole-gene coverage overview;
-- zoomed 3′ terminal-region coverage;
+- zoomed 3' terminal-region coverage;
 - replicate coverage;
 - tested terminal PAS and ΔPAU;
 - TUTR direction;
@@ -282,7 +284,7 @@ apa_sites.tsv
 
 Additional diagnostic/intermediate tables may be produced for detailed inspection and validation.
 
-### Direct RNA / true 3′-end and IsoQuant analyses
+### Direct RNA / true 3'-end and IsoQuant analyses
 
 Common outputs include:
 
@@ -381,7 +383,7 @@ bash tests/run_tests.sh
 APAURA v0.10.1 includes synthetic regression coverage for:
 
 - SAM and BAM reading;
-- true 3′-end/direct-RNA analysis;
+- true 3'-end/direct-RNA analysis;
 - IsoQuant input;
 - short-read TUTR;
 - ALE;
