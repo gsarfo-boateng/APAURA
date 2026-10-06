@@ -1,0 +1,7 @@
+sample	condition	bam
+WT_1	WT	/path/WT_1.bam
+WT_2	WT	/path/WT_2.bam
+WT_3	WT	/path/WT_3.bam
+MUT_1	MUT	/path/MUT_1.bam
+MUT_2	MUT	/path/MUT_2.bam
+MUT_3	MUT	/path/MUT_3.bam

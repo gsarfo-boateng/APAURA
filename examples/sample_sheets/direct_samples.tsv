@@ -1,0 +1,5 @@
+sample	condition	bam
+C1	control	/path/C1.bam
+C2	control	/path/C2.bam
+T1	treated	/path/T1.bam
+T2	treated	/path/T2.bam
