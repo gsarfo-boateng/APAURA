@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use APAURA, please cite this software."
+title: "APAURA: Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis"
+type: software
+authors:
+  - family-names: "Boateng-Sarfo"
+    given-names: "George"
+version: "0.10.1"
+date-released: "2026-10-06"
+license: "MIT"
+repository-code: "https://github.com/gsarfo-boateng/APAURA"
+url: "https://github.com/gsarfo-boateng/APAURA"
+abstract: >-
+  APAURA is a Java toolkit for alternative polyadenylation architecture,
+  usage, differential mechanism analysis, regulatory motif enrichment,
+  and locus visualization from direct-RNA, long-read, and conventional
+  short-read RNA-sequencing data.
+keywords:
+  - alternative polyadenylation
+  - polyadenylation
+  - RNA-seq
+  - direct RNA sequencing
+  - 3' UTR
+  - alternative last exon
+  - intronic polyadenylation
+  - RNA-binding proteins
+  - bioinformatics
