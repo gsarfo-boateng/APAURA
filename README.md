@@ -90,8 +90,7 @@ Install plotting dependencies in R:
 ```r
 install.packages(c(
   "ggplot2", "dplyr", "readr", "stringr",
-  "purrr", "tibble", "patchwork"
-))
+  "purrr", "tibble", "patchwork"))
 
 if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
@@ -135,13 +134,7 @@ Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis
 ### Conventional short-read RNA-seq
 
 ```bash
-java -jar APAURA.jar short-read \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --control control \
-  --case treated \
-  --library reverse \
-  --out results
+java -jar APAURA.jar short-read --samples samples.tsv --gtf annotation.gtf --control control --case treated --library reverse --out results
 ```
 
 Short-read fragment ends are **not** interpreted as cleavage sites. APAURA instead uses transcript-aware annotation, CIGAR-aware coverage, annotated terminal PAS structure, terminal-exon branch usage, and intronic termination evidence to quantify TUTR, ALE, and IPA.
@@ -157,12 +150,7 @@ reverse
 ### Direct RNA / true 3′-end evidence
 
 ```bash
-java -jar APAURA.jar run-direct \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --control control \
-  --case treated \
-  --out results
+java -jar APAURA.jar run-direct --samples samples.tsv --gtf annotation.gtf --control control --case treated --out results
 ```
 
 To preserve exact single-nucleotide cleavage coordinates:
@@ -174,23 +162,13 @@ To preserve exact single-nucleotide cleavage coordinates:
 ### IsoQuant corrected reads
 
 ```bash
-java -jar APAURA.jar run-isoquant \
-  --samples isoquant_samples.tsv \
-  --gtf annotation.gtf \
-  --control control \
-  --case treated \
-  --out results
+java -jar APAURA.jar run-isoquant --samples isoquant_samples.tsv --gtf annotation.gtf --control control --case treated --out results
 ```
 
 ### RBP motif enrichment
 
 ```bash
-java -jar APAURA.jar rbp-enrich \
-  --sites results/apa_sites.tsv \
-  --genes results/apa.tsv \
-  --fasta genome.fa \
-  --motifs rbp_motifs.meme \
-  --out rbp_results
+java -jar APAURA.jar rbp-enrich --sites results/apa_sites.tsv --genes results/apa.tsv --fasta genome.fa --motifs rbp_motifs.meme --out rbp_results
 ```
 
 The RBP module tests sequence motifs around regulated PAS and, for ALE events, terminal-exon splice-acceptor windows. Enrichment identifies **candidate regulatory associations**; it is not evidence of direct binding or causality by itself.
@@ -232,18 +210,7 @@ TRT_2	treated	/path/TRT_2_isoquant
 When `--results` is supplied, the plot can combine normalized coverage with tested APA results.
 
 ```bash
-java -jar APAURA.jar plot-region \
-  --results results \
-  --gene HNRNPA2B1 \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --control U1_WT \
-  --case U1_MUT \
-  --library reverse \
-  --show-replicates \
-  --show-overview \
-  --format pdf \
-  --out plots/HNRNPA2B1
+java -jar APAURA.jar plot-region --results results --gene ABCD --samples samples.tsv --gtf annotation.gtf --control U1_WT --case U1_MUT --library reverse --show-replicates --show-overview --format pdf --out plots/HNRNPA2B1
 ```
 
 Depending on the locus and analysis mode, the figure can include:
@@ -263,17 +230,7 @@ Depending on the locus and analysis mode, the figure can include:
 A completed APAURA result directory is **not required**.
 
 ```bash
-java -jar APAURA.jar plot-region \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --gene HNRNPA2B1 \
-  --control U1_WT \
-  --case U1_MUT \
-  --library reverse \
-  --show-replicates \
-  --show-overview \
-  --format pdf \
-  --out plots/HNRNPA2B1
+java -jar APAURA.jar plot-region --samples samples.tsv --gtf annotation.gtf --gene ABCD --control U1_WT --case U1_MUT --library reverse --show-replicates --show-overview --format pdf --out plots/HNRNPA2B1
 ```
 
 Standalone mode shows:
@@ -290,43 +247,19 @@ Standalone mode **does not perform differential APA testing**. Therefore it does
 ### Multiple genes
 
 ```bash
-java -jar APAURA.jar plot-region \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --gene HNRNPA2B1,PLA2G12A,TMEM254 \
-  --control U1_WT \
-  --case U1_MUT \
-  --library reverse \
-  --show-overview \
-  --format pdf \
-  --out plots
+java -jar APAURA.jar plot-region --samples samples.tsv --gtf annotation.gtf --gene HNRNPA2B1,PLA2G12A,TMEM254 --control U1_WT --case U1_MUT --library reverse --show-overview --format pdf --out plots
 ```
 
 Or:
 
 ```bash
-java -jar APAURA.jar plot-region \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --genes-file genes.txt \
-  --control U1_WT \
-  --case U1_MUT \
-  --library reverse \
-  --out plots
+java -jar APAURA.jar plot-region --samples samples.tsv --gtf annotation.gtf --genes-file genes.txt --control U1_WT --case U1_MUT --library reverse --out plots
 ```
 
 ### Genomic region
 
 ```bash
-java -jar APAURA.jar plot-region \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --region chr7:26170000-26197000 \
-  --control U1_WT \
-  --case U1_MUT \
-  --library reverse \
-  --format pdf \
-  --out plots/chr7_region
+java -jar APAURA.jar plot-region --samples samples.tsv --gtf annotation.gtf --region chr7:26170000-26197000 --control U1_WT --case U1_MUT --library reverse --format pdf --out plots/chr7_region
 ```
 
 See [`docs/TUTORIAL_PLOT_REGION.md`](docs/TUTORIAL_PLOT_REGION.md) for details.
