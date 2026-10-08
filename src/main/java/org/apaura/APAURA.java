@@ -16,6 +16,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import org.apaura.sc.Sc3utrCommand;
+import java.util.Arrays;
 
 public final class APAURA {
     public static final String VERSION = Citation.VERSION;
@@ -34,8 +36,25 @@ public final class APAURA {
             }
 
             String command = argv[0];
+
             if (argv.length > 1 && isHelp(argv[1])) {
                 printCommandHelp(command);
+                Citation.printFooter();
+                return;
+            }
+
+            /*
+             * sc3UTR commands receive the original raw arguments.
+             * Do not pass them through APAURA's Args parser.
+             */
+            if ("sc".equals(command)) {
+                runSc(
+                        Arrays.copyOfRange(
+                                argv,
+                                1,
+                                argv.length
+                        )
+                );
                 Citation.printFooter();
                 return;
             }
@@ -43,13 +62,43 @@ public final class APAURA {
             Args args = new Args(argv, 1);
             runCommand(command, args);
             Citation.printFooter();
+
         } catch (Exception exception) {
             System.err.println("ERROR: " + exception.getMessage());
+
             if (System.getenv("APAURA_DEBUG") != null) {
                 exception.printStackTrace();
             }
+
             System.exit(2);
         }
+    }
+
+    private static void runSc(String[] args) throws Exception {
+
+        if (args.length == 0 || isHelp(args[0])) {
+            printScHelp();
+            return;
+        }
+
+        String subcommand = args[0];
+
+        if ("core".equals(subcommand)) {
+
+            String[] coreArgs =
+                    Arrays.copyOfRange(
+                            args,
+                            1,
+                            args.length
+                    );
+
+            Sc3utrCommand.runCore(coreArgs);
+            return;
+        }
+
+        throw new IllegalArgumentException(
+                "Unknown sc command: " + subcommand
+        );
     }
 
     private static void runCommand(String command, Args args) throws Exception {
@@ -225,6 +274,11 @@ public final class APAURA {
             case "run-short":
                 printShortReadHelp();
                 return;
+
+            case "sc":
+                printScHelp();
+                return;
+
             case "plot-region":
                 printPlotRegionHelp();
                 return;
@@ -256,6 +310,7 @@ public final class APAURA {
                 "  run-isoquant  IsoQuant corrected-read differential APA",
                 "  short-read    Conventional RNA-seq coverage-based TUTR/ALE/IPA analysis",
                 "  run-short     Alias for short-read",
+                "  sc            Single-cell APA analysis powered by sc3UTR",
                 "  rbp-enrich    RBP motif enrichment around regulated PAS/ALE acceptors",
                 "  citation      Print citation",
                 "  version       Print version",
@@ -319,6 +374,24 @@ public final class APAURA {
                 "  java -jar APAURA.jar <command> --help"
         );
     }
+
+    private static void printScHelp() {
+        printLines(
+                "Usage:",
+                "  java -jar APAURA.jar sc <command> [options]",
+                "",
+                "APAURA single-cell / sc3UTR integration",
+                "",
+                "Commands:",
+                "  core          Direct access to the preserved sc3UTR core runtime",
+                "",
+                "Current validation:",
+                "  java -jar APAURA.jar sc core --version",
+                "",
+                "Additional sc3UTR commands will be enabled after parity testing."
+        );
+    }
+
     private static void printPlotRegionHelp() {
 
         printLines(
