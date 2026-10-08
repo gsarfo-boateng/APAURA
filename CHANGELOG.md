@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.10.1] - 2026-10-06
+
+### Added
+
+- Annotation-guided conventional short-read TUTR, ALE, mixed, and IPA analysis.
+- Mechanism-specific APA direction reporting and multi-mechanism integration.
+- RBP motif enrichment around PAS and ALE splice-acceptor windows.
+- Publication-oriented `plot-region` command.
+- Multi-gene, gene-file, region, whole-gene-overview, replicate-track, and strand-aware plotting.
+- Standalone BAM/SAM + GTF locus visualization without a completed `--results` directory.
+- Synthetic regression coverage for direct RNA, BAM/SAM, IsoQuant, short-read TUTR/ALE/IPA, mixed mechanisms, and RBP enrichment.
+
+### Validation
+
+- All APAURA v0.10.1 synthetic tests pass.
+- Standalone plotting validated on a real HNRNPA2B1 short-read locus.
+
 ## Unreleased
 
 ### Plotting

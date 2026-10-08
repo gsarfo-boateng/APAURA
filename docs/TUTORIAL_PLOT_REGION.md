@@ -1,112 +1,120 @@
-# Tutorial: `plot-region`
+# APAURA `plot-region` tutorial
 
-`plot-region` aligns RNA evidence, terminal PAS changes, IPA changes, and gene/transcript structure on one genomic coordinate system.
+`plot-region` generates locus-level APA figures from either a completed APAURA analysis or directly from BAM/SAM alignments plus a GTF.
 
-## Single gene
+## Requirements
+
+The plotting workflow requires `Rscript`, `samtools`, and the R/Bioconductor packages documented in the main README.
+
+Check the complete CLI:
+
+```bash
+java -jar APAURA.jar plot-region --help
+```
+
+## Completed-results mode
 
 ```bash
 java -jar APAURA.jar plot-region \
   --results results \
-  --gene CD44 \
-  --mode short-read \
+  --gene HNRNPA2B1 \
   --samples samples.tsv \
   --gtf annotation.gtf \
-  --control WT \
-  --case MUT \
+  --control U1_WT \
+  --case U1_MUT \
   --library reverse \
-  --format all
+  --show-replicates \
+  --show-overview \
+  --format pdf \
+  --out plots/HNRNPA2B1
 ```
+
+Depending on the analysis and locus, APAURA can display mean normalized coverage, replicate coverage, whole-gene overview, terminal-region zoom, tested PAS/ΔPAU, TUTR direction, IPA usage, ALE branch usage, and terminal architecture.
+
+## Standalone mode
+
+`--results` is optional.
+
+```bash
+java -jar APAURA.jar plot-region \
+  --samples samples.tsv \
+  --gtf annotation.gtf \
+  --gene HNRNPA2B1 \
+  --control U1_WT \
+  --case U1_MUT \
+  --library reverse \
+  --show-replicates \
+  --show-overview \
+  --format pdf \
+  --out plots/HNRNPA2B1
+```
+
+Standalone mode displays coverage and annotation-derived terminal structure. It **does not run differential APA analysis** and therefore intentionally does not claim ΔPAU, significant TUTR shortening/lengthening, ALE switching, IPA gain/loss, or formal TUTR/ALE/mixed architecture when completed APAURA results are absent.
 
 ## Multiple genes
 
 ```bash
 java -jar APAURA.jar plot-region \
-  --results results \
-  --gene CD44,SF3B1,TIMP4,TCL1A \
-  --mode short-read \
   --samples samples.tsv \
   --gtf annotation.gtf \
-  --control WT \
-  --case MUT \
+  --gene HNRNPA2B1,PLA2G12A,TMEM254 \
+  --control U1_WT \
+  --case U1_MUT \
   --library reverse \
-  --format pdf
+  --show-overview \
+  --format pdf \
+  --out plots
 ```
 
-Or use a text file:
+Or use `--genes-file genes.txt`.
+
+## Genomic region
 
 ```bash
---genes-file genes.txt
+java -jar APAURA.jar plot-region \
+  --samples samples.tsv \
+  --gtf annotation.gtf \
+  --region chr7:26170000-26197000 \
+  --control U1_WT \
+  --case U1_MUT \
+  --library reverse \
+  --format pdf \
+  --out plots/chr7_region
 ```
 
-## Genomic orientation
+Standalone region plotting currently uses the supplied GTF for annotation/terminal-structure context.
 
-Genomic x-coordinates remain left-to-right.
+## Strand orientation
 
-For negative-strand genes in short-read mode, coverage can be mirrored below zero for visual clarity. Mirroring changes only the display sign; it does not alter genomic coordinates and does not mean the biological coverage is negative.
+The genomic x-axis remains left-to-right. For a minus-strand gene, transcript 3′ direction points left. Use `--genomic-orientation` when genomic rather than transcript-oriented coverage display is preferred.
 
-Use:
+## Coverage options
 
-```bash
---genomic-orientation
-```
+- `--show-replicates` adds individual sample tracks.
+- `--show-overview` adds a whole-gene overview above the terminal-region zoom.
+- `--verbose` prints per-sample/cache messages.
 
-to keep negative-strand coverage upright.
+APAURA caches normalization totals so repeated plotting does not require recounting the same alignment totals.
 
-## Strand-aware coverage
-
-For `--library forward` or `--library reverse`, paired-end read orientations consistent with the target transcript strand are selected before locus coverage is calculated.
-
-This prevents antisense/overlapping transcription from being mixed into the target track.
-
-## Persistent normalization cache
-
-Exact assigned-read normalization is cached in:
+## Output formats
 
 ```text
-plot_normalization.tsv
+--format pdf
+--format png
+--format svg
+--format all
 ```
 
-Typical behavior:
+PDF or SVG is recommended for publication figures.
 
-```text
-first locus -> cache miss -> each BAM counted once
-later loci -> cache hit -> only regional extraction/depth
-```
+## Interpretation
 
-The cache is tied to sample/BAM and relevant plotting filters so incompatible normalization values are not silently reused.
+A standalone plot answers: **What does the coverage and annotated terminal structure look like at this locus?**
 
-## Replicates
+A completed-results plot can additionally answer: **Which PAS, terminal branches, or intronic termination events changed, by how much, and in which direction?**
 
-Use:
+Do not infer differential APA significance from the standalone coverage plot alone.
 
-```bash
---show-replicates
-```
+## Citation
 
-to overlay faint individual replicate traces. Replicates are faceted with their own condition so control/case colors do not mix.
-
-## Transcript models
-
-```bash
---show-transcripts
---max-transcripts 20
-```
-
-## Reading the panels
-
-Top to bottom:
-
-1. normalized RNA coverage/evidence;
-2. terminal PAS `delta_PAU`;
-3. IPA `delta_ipa_usage`;
-4. gene/transcript model.
-
-```text
-delta_PAU > 0 -> higher relative PAS use in case
-delta_PAU < 0 -> lower relative PAS use in case
-
-delta_ipa_usage > 0 -> IPA gain in case
-delta_ipa_usage < 0 -> IPA loss in case
-```
-
-For minus-strand genes, proximal/distal interpretation must follow transcript orientation rather than page left/right.
+> Boateng-Sarfo G. APAURA: Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis. Version 0.10.1, 2026.
