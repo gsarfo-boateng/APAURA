@@ -126,7 +126,27 @@ public final class APAURA {
             return;
         }
 
+        if ("reference".equals(subcommand)) {
 
+            if (args.length > 1 && isHelp(args[1])) {
+                printScReferenceHelp();
+                return;
+            }
+
+            Sc3utrCommand.runReference(args);
+            return;
+        }
+
+        if ("compare".equals(subcommand)) {
+
+            if (args.length > 1 && isHelp(args[1])) {
+                printScCompareHelp();
+                return;
+            }
+
+            Sc3utrCommand.runCompare(args);
+            return;
+        }
         throw new IllegalArgumentException(
                 "Unknown sc command: " + subcommand
         );
@@ -345,6 +365,9 @@ public final class APAURA {
                 "  gtf-sites      Build candidate poly(A) sites from a GTF/GFF annotation",
                 "  import-sites   Import PAS calls from an external APA caller",
                 "  merge-sites    Merge multiple PAS catalogs into a consensus catalog",
+                "  quantify       Quantify UMI-deduplicated PAS usage",
+                "  reference      Build grouped PAS usage reference tables",
+                "  compare        Compare PAS usage between biological conditions",
                 "  quantify       Quantify UMI-deduplicated PAS usage from single-cell alignments",
                 "  rbp-enrich    RBP motif enrichment around regulated PAS/ALE acceptors",
                 "  citation      Print citation",
@@ -475,6 +498,65 @@ public final class APAURA {
                 "",
                 "  java -jar APAURA.jar sc quantify --sites sites.tsv --alignment sample.bam \\",
                 "    --sample-id S1 --gene-tag XF --gene-tag-mode bd-xf --out S1.counts.tsv"
+        );
+    }
+
+    private static void printScReferenceHelp() {
+        printLines(
+                "Usage:",
+                "  java -jar APAURA.jar sc reference --sites sites.tsv --counts counts.tsv [options] --out DIR",
+                "",
+                "Build grouped single-cell poly(A) site usage reference tables.",
+                "",
+                "Required:",
+                "  --sites FILE            PAS reference",
+                "  --counts FILE           quantified PAS counts",
+                "  --out DIR               output directory",
+                "",
+                "Options:",
+                "  --cells FILE            cell metadata table",
+                "  --group-by COLUMNS      comma-separated grouping columns",
+                "",
+                "Example:",
+                "  java -jar APAURA.jar sc reference --sites sites.tsv --counts counts.tsv \\",
+                "    --cells cells.tsv --group-by cell_type --out reference_results"
+        );
+    }
+
+    private static void printScCompareHelp() {
+        printLines(
+                "Usage:",
+                "  java -jar APAURA.jar sc compare --sites sites.tsv --samples samples.tsv \\",
+                "    --counts counts.tsv --control NAME --treated NAME --out DIR [options]",
+                "",
+                "Compare single-cell poly(A) site usage between biological conditions.",
+                "",
+                "Required:",
+                "  --sites FILE            PAS reference",
+                "  --samples FILE          biological sample metadata",
+                "  --counts FILE           quantified PAS counts",
+                "  --control NAME          control condition",
+                "  --treated NAME          treated condition",
+                "  --out DIR               output directory",
+                "",
+                "Cell grouping:",
+                "  --cells FILE            cell metadata table",
+                "  --group-by COLUMNS      e.g. cell_type,cell_subtype",
+                "  --group-column COLUMN   legacy single-column grouping",
+                "  --group-separator TEXT  separator for combined group labels [::]",
+                "  --label-group-columns   label combined group columns",
+                "",
+                "Thresholds:",
+                "  --min-sample-count INT      [5]",
+                "  --min-condition-count INT   [20]",
+                "  --min-delta FLOAT            [0.10]",
+                "  --min-jsd FLOAT              [0.10]",
+                "  --fdr FLOAT                  [0.05]",
+                "  --distribution-permutations INT [999]",
+                "  --min-interaction FLOAT      [0.10]",
+                "  --no-interactions",
+                "",
+                "Interaction = treated(group1-group2) - control(group1-group2)"
         );
     }
 

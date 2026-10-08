@@ -97,6 +97,46 @@ public final class Sc3utrCommand {
         });
     }
 
+    public static void runReference(String[] args) throws Exception {
+        runCore(args);
+        annotateResults(args);
+    }
+
+    public static void runCompare(String[] args) throws Exception {
+        runCore(args);
+        annotateResults(args);
+    }
+
+    private static void annotateResults(String[] args) throws Exception {
+
+        String sites = getArg(args, "--sites");
+        String out = getArg(args, "--out");
+
+        if (sites == null || out == null) {
+            return;
+        }
+
+        String prefix = sites.endsWith(".tsv")
+                ? sites.substring(0, sites.length() - 4)
+                : sites;
+
+        File geneArchitecture =
+                new File(prefix + ".gene_architecture.tsv");
+
+        File outDir = new File(out);
+
+        if (!geneArchitecture.isFile() || !outDir.isDirectory()) {
+            return;
+        }
+
+        runArchitecture(new String[]{
+                "annotate-results",
+                "--gene-architecture", geneArchitecture.getPath(),
+                "--results-root", outDir.getPath(),
+                "--overwrite"
+        });
+    }
+
     public static String verifyCore() throws Exception {
         MaterializedJar core = materializeJar(
                 CORE_RESOURCE,
