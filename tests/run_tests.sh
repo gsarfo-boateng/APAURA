@@ -110,6 +110,130 @@ grep -q 'termination_shift_index' tests/out_architecture/apa_architecture.tsv
 grep -q 'ale_switch_index' tests/out_architecture/apa_architecture.tsv
 grep -q 'delta_tutr_wpi' tests/out_architecture/apa_architecture.tsv
 
+# Single-cell APA regression tests
+rm -rf tests/sc_synthetic tests/out_sc_reference tests/out_sc_compare
+mkdir -p tests/sc_synthetic
+
+# Public CLI help
+java -jar APAURA.jar sc --help > tests/sc_synthetic/sc_help.txt
+
+grep -q 'gtf-sites' tests/sc_synthetic/sc_help.txt
+grep -q 'import-sites' tests/sc_synthetic/sc_help.txt
+grep -q 'merge-sites' tests/sc_synthetic/sc_help.txt
+grep -q 'quantify' tests/sc_synthetic/sc_help.txt
+grep -q 'reference' tests/sc_synthetic/sc_help.txt
+grep -q 'compare' tests/sc_synthetic/sc_help.txt
+
+for cmd in gtf-sites import-sites merge-sites quantify reference compare; do
+  java -jar APAURA.jar sc "$cmd" --help >/dev/null
+done
+
+# Small transcript annotation with two PAS per gene.
+cat > tests/sc_synthetic/mini.gtf <<'EOF'
+chr1	test	gene	401	600	.	+	.	gene_id "GENE1"; gene_name "GENE1";
+chr1	test	transcript	401	500	.	+	.	gene_id "GENE1"; transcript_id "GENE1_TX1"; gene_name "GENE1";
+chr1	test	exon	401	500	.	+	.	gene_id "GENE1"; transcript_id "GENE1_TX1"; gene_name "GENE1";
+chr1	test	transcript	401	600	.	+	.	gene_id "GENE1"; transcript_id "GENE1_TX2"; gene_name "GENE1";
+chr1	test	exon	401	600	.	+	.	gene_id "GENE1"; transcript_id "GENE1_TX2"; gene_name "GENE1";
+chr2	test	gene	1100	1300	.	-	.	gene_id "GENE2"; gene_name "GENE2";
+chr2	test	transcript	1200	1300	.	-	.	gene_id "GENE2"; transcript_id "GENE2_TX1"; gene_name "GENE2";
+chr2	test	exon	1200	1300	.	-	.	gene_id "GENE2"; transcript_id "GENE2_TX1"; gene_name "GENE2";
+chr2	test	transcript	1100	1300	.	-	.	gene_id "GENE2"; transcript_id "GENE2_TX2"; gene_name "GENE2";
+chr2	test	exon	1100	1300	.	-	.	gene_id "GENE2"; transcript_id "GENE2_TX2"; gene_name "GENE2";
+EOF
+
+# PAS catalog plus architecture sidecars.
+java -jar APAURA.jar sc gtf-sites \
+  --annotation tests/sc_synthetic/mini.gtf \
+  --out tests/sc_synthetic/sites.tsv
+
+test -s tests/sc_synthetic/sites.tsv
+test -s tests/sc_synthetic/sites.site_architecture.tsv
+test -s tests/sc_synthetic/sites.gene_architecture.tsv
+test -s tests/sc_synthetic/sites.architecture_summary.tsv
+
+# UMI-deduplication test: read1/read2 are the same molecule.
+cat > tests/sc_synthetic/reads.sam <<'EOF'
+@HD	VN:1.6	SO:coordinate
+@SQ	SN:chr1	LN:5000
+@SQ	SN:chr2	LN:5000
+read1	0	chr1	451	60	50M	*	0	0	AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA	*	CB:Z:CELL1	UB:Z:UMI1	GX:Z:GENE1
+read2	0	chr1	451	60	50M	*	0	0	AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA	*	CB:Z:CELL1	UB:Z:UMI1	GX:Z:GENE1
+read3	0	chr1	551	60	50M	*	0	0	AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA	*	CB:Z:CELL1	UB:Z:UMI2	GX:Z:GENE1
+read4	0	chr1	551	60	50M	*	0	0	AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA	*	CB:Z:CELL2	UB:Z:UMI3	GX:Z:GENE1
+read5	16	chr2	1200	60	50M	*	0	0	AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA	*	CB:Z:CELL1	UB:Z:UMI4	GX:Z:GENE2
+read6	16	chr2	1100	60	50M	*	0	0	AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA	*	CB:Z:CELL2	UB:Z:UMI5	GX:Z:GENE2
+EOF
+
+java -jar APAURA.jar sc quantify \
+  --sites tests/sc_synthetic/sites.tsv \
+  --alignment tests/sc_synthetic/reads.sam \
+  --sample-id TEST_SAMPLE \
+  --gene-tag GX \
+  --three-prime-by gene \
+  --site-window 50 \
+  --out tests/sc_synthetic/counts.tsv
+
+test -s tests/sc_synthetic/counts.tsv
+
+# Six alignments contain five unique UMIs.
+awk -F'\t' '
+  NR > 1 {total += $4}
+  END {exit !(total == 5)}
+' tests/sc_synthetic/counts.tsv
+
+# Grouped reference generation.
+cat > tests/sc_synthetic/cells.tsv <<'EOF'
+barcode	sample_id	cell_type
+CELL1	TEST_SAMPLE	TestCells
+CELL2	TEST_SAMPLE	TestCells
+EOF
+
+java -jar APAURA.jar sc reference \
+  --sites tests/sc_synthetic/sites.tsv \
+  --counts tests/sc_synthetic/counts.tsv \
+  --cells tests/sc_synthetic/cells.tsv \
+  --group-by cell_type \
+  --out tests/out_sc_reference
+
+test -n "$(find tests/out_sc_reference -type f -print -quit)"
+
+# Descriptive control-versus-treated comparison.
+cat > tests/sc_synthetic/samples.tsv <<'EOF'
+sample_id	condition
+CTRL	control
+TRT	treated
+EOF
+
+cat > tests/sc_synthetic/compare_counts.tsv <<'EOF'
+sample_id	group	site_id	count
+CTRL	ALL	GENE1_PAS1	30
+CTRL	ALL	GENE1_PAS2	5
+CTRL	ALL	GENE2_PAS1	5
+CTRL	ALL	GENE2_PAS2	30
+TRT	ALL	GENE1_PAS1	5
+TRT	ALL	GENE1_PAS2	30
+TRT	ALL	GENE2_PAS1	30
+TRT	ALL	GENE2_PAS2	5
+EOF
+
+java -jar APAURA.jar sc compare \
+  --sites tests/sc_synthetic/sites.tsv \
+  --samples tests/sc_synthetic/samples.tsv \
+  --counts tests/sc_synthetic/compare_counts.tsv \
+  --control control \
+  --treated treated \
+  --no-interactions \
+  --out tests/out_sc_compare
+
+test -s tests/out_sc_compare/all_results.tsv
+test -s tests/out_sc_compare/all_results.with_architecture.tsv
+test -s tests/out_sc_compare/observed_unreplicated_events.tsv
+test -s tests/out_sc_compare/observed_unreplicated_events.with_architecture.tsv
+
+grep -q 'OBSERVED_' tests/out_sc_compare/all_results.tsv
+grep -q 'apa_architecture' tests/out_sc_compare/all_results.with_architecture.tsv
+
 # RBP motif-enrichment regression test
 python3 tests/make_rbp_synthetic.py
 rm -rf tests/out_rbp

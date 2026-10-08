@@ -443,6 +443,10 @@ public final class APAURA {
                 "Commands:",
                 "  gtf-sites      Build candidate poly(A) sites from a GTF/GFF annotation",
                 "  import-sites   Import PAS calls from an external APA caller",
+                "  merge-sites    Merge multiple PAS catalogs into a consensus catalog",
+                "  quantify       Quantify UMI-deduplicated PAS usage",
+                "  reference      Build grouped PAS usage reference tables",
+                "  compare        Compare PAS usage between biological conditions",
                 "",
                 "Run:",
                 "  java -jar APAURA.jar sc <command> --help"
