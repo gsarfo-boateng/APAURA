@@ -94,6 +94,17 @@ public final class APAURA {
             return;
         }
 
+        if ("import-sites".equals(subcommand)) {
+
+            if (args.length > 1 && isHelp(args[1])) {
+                printScImportSitesHelp();
+                return;
+            }
+
+            Sc3utrCommand.runCore(args);
+            return;
+        }
+
         throw new IllegalArgumentException(
                 "Unknown sc command: " + subcommand
         );
@@ -381,12 +392,32 @@ public final class APAURA {
                 "Single-cell alternative polyadenylation analysis",
                 "",
                 "Commands:",
-                "  gtf-sites     Build candidate poly(A) sites from a GTF/GFF annotation",
+                "  gtf-sites      Build candidate poly(A) sites from a GTF/GFF annotation",
+                "  import-sites   Import PAS calls from an external APA caller",
                 "",
                 "Run:",
-                "  java -jar APAURA.jar sc <command> --help",
+                "  java -jar APAURA.jar sc <command> --help"
+        );
+    }
+
+    private static void printScImportSitesHelp() {
+        printLines(
+                "Usage:",
+                "  java -jar APAURA.jar sc import-sites --input caller.tsv --source NAME --out sites.tsv [options]",
                 "",
-                "Additional single-cell commands are being integrated and validated."
+                "Import candidate poly(A) sites from an external APA caller.",
+                "",
+                "Required:",
+                "  --input FILE            input caller table",
+                "  --source NAME           source name, for example SCAPE",
+                "  --out FILE              output PAS catalog",
+                "",
+                "Options:",
+                "  --format FORMAT         auto|scape|sierra|scapatrap|bed [auto]",
+                "  --*-column VALUE        override detected input columns",
+                "",
+                "Example:",
+                "  java -jar APAURA.jar sc import-sites --input sites.bed --source custom --format bed --out sites.tsv"
         );
     }
 
