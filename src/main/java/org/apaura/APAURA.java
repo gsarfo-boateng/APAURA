@@ -105,6 +105,17 @@ public final class APAURA {
             return;
         }
 
+        if ("merge-sites".equals(subcommand)) {
+
+            if (args.length > 1 && isHelp(args[1])) {
+                printScMergeSitesHelp();
+                return;
+            }
+
+            Sc3utrCommand.runCore(args);
+            return;
+        }
+
         throw new IllegalArgumentException(
                 "Unknown sc command: " + subcommand
         );
@@ -320,6 +331,9 @@ public final class APAURA {
                 "  short-read    Conventional RNA-seq coverage-based TUTR/ALE/IPA analysis",
                 "  run-short     Alias for short-read",
                 "  sc            Single-cell APA analysis powered by sc3UTR",
+                "  gtf-sites      Build candidate poly(A) sites from a GTF/GFF annotation",
+                "  import-sites   Import PAS calls from an external APA caller",
+                "  merge-sites    Merge multiple PAS catalogs into a consensus catalog",
                 "  rbp-enrich    RBP motif enrichment around regulated PAS/ALE acceptors",
                 "  citation      Print citation",
                 "  version       Print version",
@@ -418,6 +432,28 @@ public final class APAURA {
                 "",
                 "Example:",
                 "  java -jar APAURA.jar sc import-sites --input sites.bed --source custom --format bed --out sites.tsv"
+        );
+    }
+
+    private static void printScMergeSitesHelp() {
+        printLines(
+                "Usage:",
+                "  java -jar APAURA.jar sc merge-sites --inputs a.tsv,b.tsv --out consensus.tsv [options]",
+                "",
+                "Merge multiple poly(A) site catalogs into a consensus PAS catalog.",
+                "",
+                "Required:",
+                "  --inputs FILES          comma-separated PAS catalogs",
+                "  --out FILE              output consensus PAS catalog",
+                "",
+                "Options:",
+                "  --sources NAMES         comma-separated source names, for example GTF,SCAPE",
+                "  --cluster-bp INT        cluster nearby PAS positions [24]",
+                "  --min-sources INT       minimum number of supporting sources [1]",
+                "",
+                "Example:",
+                "  java -jar APAURA.jar sc merge-sites --inputs gtf.tsv,scape.tsv \\",
+                "    --sources GTF,SCAPE --cluster-bp 24 --out consensus.tsv"
         );
     }
 
