@@ -1,0 +1,9 @@
+sample	condition	site_id	gene_id	gene_name	chrom	pos0	strand	region	site_rank	count	gene_end_count	pau
+C1	control	PAS0000001	GENE1	GENE1	chr1	699	+	terminal_exon_noncoding	1	8	40	0.20000000
+C2	control	PAS0000001	GENE1	GENE1	chr1	699	+	terminal_exon_noncoding	1	10	40	0.25000000
+T1	treated	PAS0000001	GENE1	GENE1	chr1	699	+	terminal_exon_noncoding	1	32	40	0.80000000
+T2	treated	PAS0000001	GENE1	GENE1	chr1	699	+	terminal_exon_noncoding	1	30	40	0.75000000
+C1	control	PAS0000002	GENE1	GENE1	chr1	899	+	terminal_exon_noncoding	2	32	40	0.80000000
+C2	control	PAS0000002	GENE1	GENE1	chr1	899	+	terminal_exon_noncoding	2	30	40	0.75000000
+T1	treated	PAS0000002	GENE1	GENE1	chr1	899	+	terminal_exon_noncoding	2	8	40	0.20000000
+T2	treated	PAS0000002	GENE1	GENE1	chr1	899	+	terminal_exon_noncoding	2	10	40	0.25000000

@@ -1,0 +1,1 @@
+gene_id	gene_name	branch_id	branch_rank	chrom	strand	representative_pas_1based	control_usage	case_usage	delta_usage	control_usage_sd	case_usage_sd	control_n_total	case_n_total	control_n_any_evidence	case_n_any_evidence	control_n_informative	case_n_informative	control_evidence	case_evidence	pvalue	fdr	dispersion_rho	method	status

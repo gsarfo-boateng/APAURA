@@ -1,0 +1,2 @@
+event_id	gene_id	gene_name	biotype	chrom	strand	event_type	start_1based	end_1based	control_usage	case_usage	delta_usage	effect_size	effect_metric	pvalue	fdr	direction	status
+GAPA1|TE001	GAPA1	ApaDemo	protein_coding	chr1	+	TUTR	200	300	0.73500000	0.26500000	-0.47000000	0.47000000	APD	6.587379369e-05	6.587379369e-05	shortening	ok

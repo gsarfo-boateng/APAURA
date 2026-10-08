@@ -1,0 +1,2 @@
+gene_id	gene_name	biotype	chrom	gene_start_1based	gene_end_1based	strand	apa_architecture	apa_change	apa_direction	changed_mechanisms	tutr_change	tutr_direction	delta_tutr_wpi	tutr_shift_magnitude	tutr_min_fdr	ale_change	ale_direction	delta_ale_wpi	ale_switch_index	ale_min_fdr	ipa_change	ipa_direction	delta_ipa_usage	ipa_min_fdr	min_mechanism_fdr	status
+GAPA1	ApaDemo	protein_coding	chr1	101	300	+	TUTR	yes	shortening	TUTR	yes	shortening	-0.47000000	0.47000000	6.587379369e-05	no	not_applicable	NA	NA	NA	no	not_applicable	NA	NA	6.587379369e-05	ok

@@ -1,0 +1,10 @@
+group	target_type	motif_id	rbp_name	foreground_sites	background_sites	foreground_hit_sites	background_hit_sites	foreground_hit_rate	background_hit_rate	odds_ratio	fisher_pvalue	fisher_fdr	permutation_pvalue	permutation_fdr	background_mode
+TUTR:shortening	PAS	RBP_A	RBP_A	4	8	4	0	1.000000	0.000000	153.000	0.0020202020	0.0090909091	0.0049751244	0.022388060	stable_matched
+TUTR:shortening	PAS	RBP_C	RBP_C	4	8	0	0	0.000000	0.000000	1.88889	1.0000000	1.0000000	1.0000000	1.0000000	stable_matched
+TUTR:shortening	PAS	RBP_G	RBP_G	4	8	4	8	1.000000	1.000000	0.529412	1.0000000	1.0000000	1.0000000	1.0000000	stable_matched
+ALE:distal_switch	PAS	RBP_A	RBP_A	4	8	0	0	0.000000	0.000000	1.88889	1.0000000	1.0000000	1.0000000	1.0000000	stable_matched
+ALE:distal_switch	PAS	RBP_C	RBP_C	4	8	0	0	0.000000	0.000000	1.88889	1.0000000	1.0000000	1.0000000	1.0000000	stable_matched
+ALE:distal_switch	PAS	RBP_G	RBP_G	4	8	4	8	1.000000	1.000000	0.529412	1.0000000	1.0000000	1.0000000	1.0000000	stable_matched
+ALE:distal_switch	ALE_acceptor	RBP_A	RBP_A	4	8	0	0	0.000000	0.000000	1.88889	1.0000000	1.0000000	1.0000000	1.0000000	stable_matched
+ALE:distal_switch	ALE_acceptor	RBP_C	RBP_C	4	8	4	0	1.000000	0.000000	153.000	0.0020202020	0.0090909091	0.0049751244	0.022388060	stable_matched
+ALE:distal_switch	ALE_acceptor	RBP_G	RBP_G	4	8	4	8	1.000000	1.000000	0.529412	1.0000000	1.0000000	1.0000000	1.0000000	stable_matched

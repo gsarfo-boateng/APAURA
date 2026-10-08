@@ -1,0 +1,2 @@
+group_id	gene_id	gene_name	biotype	chrom	strand	scope	anchor0	n_sites	pas_positions_1based	segment_lengths
+GAPA1|TE001	GAPA1	ApaDemo	protein_coding	chr1	+	TANDEM_3UTR	100	2	200,300	100,100
