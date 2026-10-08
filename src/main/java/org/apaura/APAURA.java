@@ -42,11 +42,11 @@ public final class APAURA {
                 Citation.printFooter();
                 return;
             }
-
             /*
-             * sc3UTR commands receive the original raw arguments.
+             * Single-cell commands receive their original raw arguments.
              * Do not pass them through APAURA's Args parser.
              */
+
             if ("sc".equals(command)) {
                 runSc(
                         Arrays.copyOfRange(
@@ -83,16 +83,14 @@ public final class APAURA {
 
         String subcommand = args[0];
 
-        if ("core".equals(subcommand)) {
+        if ("gtf-sites".equals(subcommand)) {
 
-            String[] coreArgs =
-                    Arrays.copyOfRange(
-                            args,
-                            1,
-                            args.length
-                    );
+            if (args.length > 1 && isHelp(args[1])) {
+                printScGtfSitesHelp();
+                return;
+            }
 
-            Sc3utrCommand.runCore(coreArgs);
+            Sc3utrCommand.runCore(args);
             return;
         }
 
@@ -380,18 +378,37 @@ public final class APAURA {
                 "Usage:",
                 "  java -jar APAURA.jar sc <command> [options]",
                 "",
-                "APAURA single-cell / sc3UTR integration",
+                "Single-cell alternative polyadenylation analysis",
                 "",
                 "Commands:",
-                "  core          Direct access to the preserved sc3UTR core runtime",
+                "  gtf-sites     Build candidate poly(A) sites from a GTF/GFF annotation",
                 "",
-                "Current validation:",
-                "  java -jar APAURA.jar sc core --version",
+                "Run:",
+                "  java -jar APAURA.jar sc <command> --help",
                 "",
-                "Additional sc3UTR commands will be enabled after parity testing."
+                "Additional single-cell commands are being integrated and validated."
         );
     }
 
+    private static void printScGtfSitesHelp() {
+        printLines(
+                "Usage:",
+                "  java -jar APAURA.jar sc gtf-sites --annotation annotation.gtf|gff3 --out sites.tsv [options]",
+                "",
+                "Build a strand-aware candidate 3' end / poly(A) site catalog",
+                "from transcript annotations.",
+                "",
+                "Required:",
+                "  --annotation FILE       GTF or GFF3 transcript annotation",
+                "  --out FILE              output PAS catalog",
+                "",
+                "Options:",
+                "  --cluster-bp INT        cluster nearby annotated transcript ends [24]",
+                "",
+                "Example:",
+                "  java -jar APAURA.jar sc gtf-sites --annotation gencode.gtf --out sites.tsv"
+        );
+    }
     private static void printPlotRegionHelp() {
 
         printLines(

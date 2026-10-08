@@ -20,8 +20,6 @@ import java.util.List;
  */
 public final class Sc3utrCommand {
 
-    public static final String VERSION = "0.9.5-java8";
-
     private static final String CORE_RESOURCE =
             "/org/apaura/sc/sc3utr-core-0.9.4-java8.jar";
 

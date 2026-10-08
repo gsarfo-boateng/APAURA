@@ -17,13 +17,4 @@ class Sc3utrCommandTest {
                 Sc3utrCommand.verifyCore()
         );
     }
-
-    @Test
-    void sc3utrVersionIsExpected() {
-
-        assertEquals(
-                "0.9.5-java8",
-                Sc3utrCommand.VERSION
-        );
-    }
 }
