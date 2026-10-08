@@ -115,6 +115,17 @@ public final class APAURA {
             Sc3utrCommand.runCore(args);
             return;
         }
+        if ("quantify".equals(subcommand)) {
+
+            if (args.length > 1 && isHelp(args[1])) {
+                printScQuantifyHelp();
+                return;
+            }
+
+            Sc3utrCommand.runCore(args);
+            return;
+        }
+
 
         throw new IllegalArgumentException(
                 "Unknown sc command: " + subcommand
@@ -334,6 +345,7 @@ public final class APAURA {
                 "  gtf-sites      Build candidate poly(A) sites from a GTF/GFF annotation",
                 "  import-sites   Import PAS calls from an external APA caller",
                 "  merge-sites    Merge multiple PAS catalogs into a consensus catalog",
+                "  quantify       Quantify UMI-deduplicated PAS usage from single-cell alignments",
                 "  rbp-enrich    RBP motif enrichment around regulated PAS/ALE acceptors",
                 "  citation      Print citation",
                 "  version       Print version",
@@ -432,6 +444,37 @@ public final class APAURA {
                 "",
                 "Example:",
                 "  java -jar APAURA.jar sc import-sites --input sites.bed --source custom --format bed --out sites.tsv"
+        );
+    }
+
+    private static void printScQuantifyHelp() {
+        printLines(
+                "Usage:",
+                "  java -jar APAURA.jar sc quantify --sites sites.tsv --alignment sample.sam|bam|cram",
+                "    --sample-id ID --out counts.tsv [options]",
+                "",
+                "Quantify single-cell poly(A) site usage from SAM, BAM, or CRAM alignments.",
+                "",
+                "Required:",
+                "  --sites FILE            PAS reference",
+                "  --alignment FILE        SAM, BAM, or CRAM alignment",
+                "  --sample-id ID          biological sample identifier",
+                "  --out FILE              output PAS count table",
+                "",
+                "Options:",
+                "  --barcode-tag TAG       cell barcode tag [CB]",
+                "  --umi-tag TAG           UMI tag [UB]",
+                "  --gene-tag TAG          gene assignment tag [GX]",
+                "  --gene-tag-mode MODE    plain|bd-xf [plain]",
+                "  --site-window INT       maximum distance to compatible PAS [50]",
+                "  --three-prime-by MODE   gene|read|opposite-read|nearest-end [gene]",
+                "",
+                "Examples:",
+                "  java -jar APAURA.jar sc quantify --sites sites.tsv --alignment sample.bam \\",
+                "    --sample-id S1 --out S1.counts.tsv",
+                "",
+                "  java -jar APAURA.jar sc quantify --sites sites.tsv --alignment sample.bam \\",
+                "    --sample-id S1 --gene-tag XF --gene-tag-mode bd-xf --out S1.counts.tsv"
         );
     }
 
