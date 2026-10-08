@@ -90,7 +90,7 @@ public final class APAURA {
                 return;
             }
 
-            Sc3utrCommand.runCore(args);
+            Sc3utrCommand.runGtfSites(args);
             return;
         }
 
