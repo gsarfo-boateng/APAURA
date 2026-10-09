@@ -4,6 +4,7 @@ import org.apaura.model.GeneModel;
 import org.apaura.model.Interval;
 import org.apaura.model.SiteCluster;
 import org.apaura.model.Strand;
+import org.apaura.model.TranscriptModel;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -26,32 +27,22 @@ public final class GtfAnnotation {
     private final Map<String, List<GeneModel>> genesByChromosome =
             new HashMap<String, List<GeneModel>>();
 
-    private static final class TranscriptBuffer {
-        final String geneId;
-        final Strand strand;
-        final List<Interval> exons = new ArrayList<Interval>();
+    private final List<TranscriptModel> transcriptModels =
+            new ArrayList<TranscriptModel>();
 
-        TranscriptBuffer(String geneId, Strand strand) {
-            this.geneId = geneId;
-            this.strand = strand;
+    public List<TranscriptModel> transcripts() {
+        return Collections.unmodifiableList(transcriptModels);
+    }
+
+    private static final class TranscriptBuffer {
+        final TranscriptModel model;
+
+        TranscriptBuffer(TranscriptModel model) {
+            this.model = model;
         }
 
         Interval terminalExon() {
-            if (exons.isEmpty()) {
-                return null;
-            }
-
-            Interval terminal = exons.get(0);
-            for (Interval exon : exons) {
-                if (strand == Strand.MINUS) {
-                    if (exon.start0 < terminal.start0) {
-                        terminal = exon;
-                    }
-                } else if (exon.end0 > terminal.end0) {
-                    terminal = exon;
-                }
-            }
-            return terminal;
+            return model.terminalExon();
         }
     }
 
@@ -103,11 +94,18 @@ public final class GtfAnnotation {
         addFallbackTerminalExons(genes);
         annotation.indexGenes(genes);
 
+        for (TranscriptBuffer transcript : transcripts.values()) {
+            if (!transcript.model.exons.isEmpty()
+                    && transcript.model.strand != Strand.UNKNOWN) {
+                annotation.transcriptModels.add(transcript.model);
+            }
+        }
+
         System.err.println(
                 "[APAURA] loaded GTF genes="
                         + genes.size()
                         + " transcript_terminal_exons="
-                        + transcripts.size()
+                        + annotation.transcriptModels.size()
         );
         return annotation;
     }
@@ -165,7 +163,16 @@ public final class GtfAnnotation {
 
         gene.observe(start0, end0);
         updateGeneMetadata(gene, geneName, biotype);
-        addFeature(feature, start0, end0, strand, attributes, gene, transcripts);
+        addFeature(
+                feature,
+                start0,
+                end0,
+                fields[0],
+                strand,
+                attributes,
+                gene,
+                transcripts
+        );
     }
 
     private static void updateGeneMetadata(
@@ -185,6 +192,7 @@ public final class GtfAnnotation {
             String feature,
             int start0,
             int end0,
+            String chrom,
             Strand strand,
             Map<String, String> attributes,
             GeneModel gene,
@@ -194,28 +202,99 @@ public final class GtfAnnotation {
             Interval exon = new Interval(start0, end0);
             gene.exons.add(exon);
 
-            String transcriptId = attributes.get("transcript_id");
-            if (transcriptId != null) {
-                String transcriptKey = gene.geneId + "\u0001" + transcriptId;
-                TranscriptBuffer transcript = transcripts.get(transcriptKey);
-                if (transcript == null) {
-                    transcript = new TranscriptBuffer(gene.geneId, strand);
-                    transcripts.put(transcriptKey, transcript);
-                }
-                transcript.exons.add(exon);
+            TranscriptBuffer transcript = getOrCreateTranscript(
+                    chrom,
+                    strand,
+                    attributes,
+                    gene,
+                    transcripts
+            );
+
+            if (transcript != null) {
+                transcript.model.addExon(start0, end0);
             }
+
             return;
         }
 
         if (feature.equals("cds")) {
             gene.addCds(start0, end0);
-        } else if (feature.equals("utr")) {
+
+            TranscriptBuffer transcript = getOrCreateTranscript(
+                    chrom,
+                    strand,
+                    attributes,
+                    gene,
+                    transcripts
+            );
+
+            if (transcript != null) {
+                transcript.model.addCds(start0, end0);
+            }
+
+            return;
+        }
+
+        if (feature.equals("utr")) {
             gene.utrs.add(new Interval(start0, end0));
-        } else if (feature.equals("three_prime_utr")
+            return;
+        }
+
+        if (feature.equals("three_prime_utr")
                 || feature.equals("3utr")
                 || feature.equals("3'utr")) {
             gene.explicitUtr3.add(new Interval(start0, end0));
         }
+    }
+
+    private static TranscriptBuffer getOrCreateTranscript(
+            String chrom,
+            Strand strand,
+            Map<String, String> attributes,
+            GeneModel gene,
+            Map<String, TranscriptBuffer> transcripts) {
+        String transcriptId = attributes.get("transcript_id");
+        if (transcriptId == null) {
+            return null;
+        }
+
+        String transcriptKey =
+                gene.geneId + "\u0001" + transcriptId;
+
+        TranscriptBuffer transcript = transcripts.get(transcriptKey);
+        if (transcript != null) {
+            return transcript;
+        }
+
+        String geneName = attributes.containsKey("gene_name")
+                ? attributes.get("gene_name")
+                : gene.geneName;
+
+        String biotype = firstPresent(
+                attributes,
+                "transcript_type",
+                "transcript_biotype",
+                "gene_type",
+                "gene_biotype"
+        );
+
+        if (biotype == null) {
+            biotype = ".";
+        }
+
+        TranscriptModel model = new TranscriptModel(
+                transcriptId,
+                gene.geneId,
+                geneName,
+                biotype,
+                chrom,
+                strand
+        );
+
+        transcript = new TranscriptBuffer(model);
+        transcripts.put(transcriptKey, transcript);
+
+        return transcript;
     }
 
     private static void attachTranscriptTerminalExons(
@@ -223,8 +302,9 @@ public final class GtfAnnotation {
             Map<String, TranscriptBuffer> transcripts
     ) {
         for (TranscriptBuffer transcript : transcripts.values()) {
-            GeneModel gene = genes.get(transcript.geneId);
+            GeneModel gene = genes.get(transcript.model.geneId);
             Interval terminalExon = transcript.terminalExon();
+
             if (gene != null && terminalExon != null) {
                 addUnique(gene.terminalExons, terminalExon);
             }
