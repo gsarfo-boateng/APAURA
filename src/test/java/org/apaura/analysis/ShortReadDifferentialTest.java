@@ -123,6 +123,53 @@ class ShortReadDifferentialTest {
         assertTrue(Double.isFinite(distal.q));
     }
 
+
+    @Test
+    void detectsMultiPasRedistributionFromVectorMagnitude() {
+        ShortReadGroup group = fourSiteGroup();
+        List<Sample> samples = Arrays.asList(
+                new Sample("C1", "control", "C1.bam"),
+                new Sample("T1", "case", "T1.bam")
+        );
+
+        Map<String, List<ShortReadQuantification>> bySample =
+                new LinkedHashMap<String, List<ShortReadQuantification>>();
+        bySample.put(
+                "C1",
+                singleton(quant4(group, 250, 250, 250, 250))
+        );
+        bySample.put(
+                "T1",
+                singleton(quant4(group, 190, 310, 190, 310))
+        );
+
+        ShortReadDifferential.Results results = ShortReadDifferential.run(
+                samples,
+                bySample,
+                "control",
+                "case",
+                10,
+                3,
+                0.10,
+                0.05,
+                0.10
+        );
+
+        for (ShortReadDifferential.SiteResult site : results.sites) {
+            assertTrue(Math.abs(site.delta) < 0.10);
+            assertEquals("ok", site.status);
+        }
+
+        ShortReadDifferential.GroupResult summary = results.groups.get(0);
+        assertEquals("ok", summary.status);
+        assertEquals(0.12, summary.apd, 1.0E-12);
+        assertTrue(summary.jsd > 0.0);
+        assertEquals(0.04, summary.deltaWpi, 1.0E-12);
+        assertEquals("no_directional_shift", summary.observedDirection);
+        assertTrue(summary.apaChange);
+        assertEquals("no_directional_shift", summary.apaDirection);
+    }
+
     private static ShortReadGroup group() {
         List<ShortReadSite> sites = Arrays.asList(
                 new ShortReadSite("G1|PAS1", 100, 1, 0.0),
@@ -145,6 +192,61 @@ class ShortReadDifferentialTest {
                 90,
                 sites,
                 segments
+        );
+    }
+
+
+    private static ShortReadGroup fourSiteGroup() {
+        List<ShortReadSite> sites = Arrays.asList(
+                new ShortReadSite("G2|PAS1", 100, 1, 0.0),
+                new ShortReadSite("G2|PAS2", 200, 2, 1.0 / 3.0),
+                new ShortReadSite("G2|PAS3", 300, 3, 2.0 / 3.0),
+                new ShortReadSite("G2|PAS4", 400, 4, 1.0)
+        );
+        List<CoverageSegment> segments = Arrays.asList(
+                new CoverageSegment(0, 90, 150, "S1"),
+                new CoverageSegment(1, 151, 250, "S2"),
+                new CoverageSegment(2, 251, 350, "S3"),
+                new CoverageSegment(3, 351, 450, "S4")
+        );
+        return new ShortReadGroup(
+                "G2|TE001",
+                "G2",
+                "GENE2",
+                "protein_coding",
+                "chr1",
+                Strand.PLUS,
+                "TANDEM_3UTR",
+                90,
+                sites,
+                segments
+        );
+    }
+
+    private static ShortReadQuantification quant4(
+            ShortReadGroup group,
+            int pas1,
+            int pas2,
+            int pas3,
+            int pas4
+    ) {
+        int total = pas1 + pas2 + pas3 + pas4;
+        int[] counts = new int[]{pas1, pas2, pas3, pas4};
+        double[] pau = new double[]{
+                pas1 / (double) total,
+                pas2 / (double) total,
+                pas3 / (double) total,
+                pas4 / (double) total
+        };
+        return new ShortReadQuantification(
+                group,
+                new long[]{0, 0, 0, 0},
+                new double[]{0, 0, 0, 0},
+                new double[]{0, 0, 0, 0},
+                new double[]{pas1, pas2, pas3, pas4},
+                pau,
+                counts,
+                total
         );
     }
 

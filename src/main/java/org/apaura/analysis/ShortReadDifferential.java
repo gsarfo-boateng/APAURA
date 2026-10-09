@@ -57,7 +57,10 @@ public final class ShortReadDifferential {
         public double deltaWpi = Double.NaN;
         public double controlWpiSd = Double.NaN;
         public double caseWpiSd = Double.NaN;
+        /** Total-variation distance between mean control and case cPAU vectors. */
         public double apd = Double.NaN;
+        /** Jensen-Shannon divergence between mean control and case cPAU vectors. */
+        public double jsd = Double.NaN;
         public double minPvalue = Double.NaN;
         public double minFdr = Double.NaN;
 
@@ -284,10 +287,10 @@ public final class ShortReadDifferential {
             }
         }
 
-        result.controlPau = mean(controlPau);
-        result.casePau = mean(casePau);
-        result.controlPauSd = sampleSd(controlPau);
-        result.casePauSd = sampleSd(casePau);
+        result.controlPau = ApaUsageMetrics.mean(controlPau);
+        result.casePau = ApaUsageMetrics.mean(casePau);
+        result.controlPauSd = ApaUsageMetrics.sampleSd(controlPau);
+        result.casePauSd = ApaUsageMetrics.sampleSd(casePau);
         result.delta = finiteDifference(result.casePau, result.controlPau);
 
         if (result.controlInformativeReplicates == 0
@@ -468,29 +471,39 @@ public final class ShortReadDifferential {
             if (isControl) {
                 result.controlInformativeReplicates++;
                 controlWpi.add(sampleWpi);
-                addInPlace(controlMeanPau, quantification.sitePau);
+                ApaUsageMetrics.addInPlace(controlMeanPau, quantification.sitePau);
             } else {
                 result.caseInformativeReplicates++;
                 caseWpi.add(sampleWpi);
-                addInPlace(caseMeanPau, quantification.sitePau);
+                ApaUsageMetrics.addInPlace(caseMeanPau, quantification.sitePau);
             }
         }
 
         if (!controlWpi.isEmpty()) {
-            result.controlWpi = mean(controlWpi);
-            result.controlWpiSd = sampleSd(controlWpi);
-            averageInPlace(controlMeanPau, controlWpi.size());
+            result.controlWpi = ApaUsageMetrics.mean(controlWpi);
+            result.controlWpiSd = ApaUsageMetrics.sampleSd(controlWpi);
+            ApaUsageMetrics.averageInPlace(controlMeanPau, controlWpi.size());
         }
         if (!caseWpi.isEmpty()) {
-            result.caseWpi = mean(caseWpi);
-            result.caseWpiSd = sampleSd(caseWpi);
-            averageInPlace(caseMeanPau, caseWpi.size());
+            result.caseWpi = ApaUsageMetrics.mean(caseWpi);
+            result.caseWpiSd = ApaUsageMetrics.sampleSd(caseWpi);
+            ApaUsageMetrics.averageInPlace(caseMeanPau, caseWpi.size());
         }
 
         result.deltaWpi = finiteDifference(result.caseWpi, result.controlWpi);
         if (!controlWpi.isEmpty() && !caseWpi.isEmpty()) {
-            result.apd = totalVariation(controlMeanPau, caseMeanPau);
-            result.observedDirection = observedDirection(result.deltaWpi, wpiThreshold);
+            result.apd = ApaUsageMetrics.totalVariationDistance(
+                    controlMeanPau,
+                    caseMeanPau
+            );
+            result.jsd = ApaUsageMetrics.jensenShannonDivergence(
+                    controlMeanPau,
+                    caseMeanPau
+            );
+            result.observedDirection = ApaUsageMetrics.observedDirection(
+                    result.deltaWpi,
+                    wpiThreshold
+            );
         }
 
         if (result.controlInformativeReplicates == 0
@@ -509,7 +522,7 @@ public final class ShortReadDifferential {
         }
 
         result.status = "ok";
-        boolean significant = false;
+        boolean statisticallySupported = false;
 
         if (siteResults != null) {
             for (SiteResult site : siteResults) {
@@ -522,19 +535,18 @@ public final class ShortReadDifferential {
                     if (!Double.isFinite(result.minFdr) || site.q < result.minFdr) {
                         result.minFdr = site.q;
                     }
-                    if (site.status.equals("ok")
-                            && site.q <= fdr
-                            && Double.isFinite(site.delta)
-                            && Math.abs(site.delta) >= effect) {
-                        significant = true;
+                    if (site.status.equals("ok") && site.q <= fdr) {
+                        statisticallySupported = true;
                     }
                 }
             }
         }
 
-        result.apaChange = significant;
-        result.apaDirection = direction(
-                significant,
+        result.apaChange = statisticallySupported
+                && Double.isFinite(result.apd)
+                && result.apd >= effect;
+        result.apaDirection = ApaUsageMetrics.supportedDirection(
+                result.apaChange,
                 result.deltaWpi,
                 wpiThreshold
         );
@@ -546,79 +558,11 @@ public final class ShortReadDifferential {
             ShortReadGroup group,
             double[] pau
     ) {
-        double wpi = 0.0;
+        double[] positions = new double[group.sites.size()];
         for (int index = 0; index < group.sites.size(); index++) {
-            wpi += pau[index] * group.sites.get(index).normalizedPosition;
+            positions[index] = group.sites.get(index).normalizedPosition;
         }
-        return wpi;
-    }
-
-    private static String direction(
-            boolean significant,
-            double deltaWpi,
-            double threshold
-    ) {
-        if (!significant) {
-            return "stable";
-        }
-        return observedDirection(deltaWpi, threshold);
-    }
-
-    private static String observedDirection(double deltaWpi, double threshold) {
-        if (!Double.isFinite(deltaWpi)) {
-            return "not_applicable";
-        }
-        if (deltaWpi >= threshold) {
-            return "lengthening";
-        }
-        if (deltaWpi <= -threshold) {
-            return "shortening";
-        }
-        return "no_directional_shift";
-    }
-
-    private static void addInPlace(double[] target, double[] values) {
-        for (int index = 0; index < target.length; index++) {
-            target[index] += values[index];
-        }
-    }
-
-    private static void averageInPlace(double[] values, int count) {
-        for (int index = 0; index < values.length; index++) {
-            values[index] /= count;
-        }
-    }
-
-    private static double totalVariation(double[] left, double[] right) {
-        double distance = 0.0;
-        for (int index = 0; index < left.length; index++) {
-            distance += Math.abs(right[index] - left[index]);
-        }
-        return 0.5 * distance;
-    }
-
-    private static double mean(List<Double> values) {
-        if (values.isEmpty()) {
-            return Double.NaN;
-        }
-        double sum = 0.0;
-        for (double value : values) {
-            sum += value;
-        }
-        return sum / values.size();
-    }
-
-    private static double sampleSd(List<Double> values) {
-        if (values.size() < 2) {
-            return Double.NaN;
-        }
-        double mean = mean(values);
-        double ss = 0.0;
-        for (double value : values) {
-            double delta = value - mean;
-            ss += delta * delta;
-        }
-        return Math.sqrt(ss / (values.size() - 1.0));
+        return ApaUsageMetrics.weightedPositionIndex(pau, positions);
     }
 
     private static double finiteDifference(double right, double left) {

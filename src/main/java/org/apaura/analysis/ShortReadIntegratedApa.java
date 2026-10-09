@@ -25,6 +25,7 @@ public final class ShortReadIntegratedApa {
         public String tutrDirection = "not_applicable";
         public double tutrDeltaWpi = Double.NaN;
         public double tutrShiftMagnitude = Double.NaN;
+        public double tutrJsd = Double.NaN;
         public double tutrMinPvalue = Double.NaN;
         public double tutrMinFdr = Double.NaN;
         public String tutrStatus = "not_tested";
@@ -151,6 +152,7 @@ public final class ShortReadIntegratedApa {
             result.tutrRepresentativeGroup = representative.group.id;
             result.tutrDeltaWpi = representative.deltaWpi;
             result.tutrShiftMagnitude = representative.apd;
+            result.tutrJsd = representative.jsd;
             result.tutrObservedDirection = representative.observedDirection;
             result.tutrDirection = result.tutrChange
                     ? representative.apaDirection

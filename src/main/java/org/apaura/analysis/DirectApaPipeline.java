@@ -397,14 +397,15 @@ public final class DirectApaPipeline {
                     "site_id\tgene_id\tgene_name\tbiotype\tchrom\tpos0\tstrand\tregion\t"
                             + "architecture_role\tterminal_exon\tterminal_exon_anchor0\t"
                             + "terminal_branch_rank\tsite_rank\tcontrol_pau\tcase_pau\t"
-                            + "delta_pau\tpvalue\tfdr\tdispersion_rho\tmethod"
+                            + "delta_pau\tcontrol_n_evaluable\tcase_n_evaluable\t"
+                            + "pvalue\tfdr\tdispersion_rho\tmethod\tstatus"
             );
 
             for (DifferentialApa.SiteResult result : results) {
                 SiteCluster site = result.site;
                 writer.printf(
                         Locale.ROOT,
-                        "%s\t%s\t%s\t%s\t%s\t%d\t%c\t%s\t%s\t%s\t%s\t%s\t%d\t%.6f\t%.6f\t%.6f\t%.8g\t%.8g\t%s\t%s%n",
+                        "%s\t%s\t%s\t%s\t%s\t%d\t%c\t%s\t%s\t%s\t%s\t%s\t%d\t%.6f\t%.6f\t%.6f\t%d\t%d\t%s\t%s\t%s\t%s\t%s%n",
                         site.id,
                         site.geneId,
                         site.geneName,
@@ -421,12 +422,15 @@ public final class DirectApaPipeline {
                         result.controlPau,
                         result.casePau,
                         result.delta,
-                        result.p,
-                        result.q,
+                        result.controlReplicates,
+                        result.caseReplicates,
+                        fmt8(result.p),
+                        fmt8(result.q),
                         Double.isNaN(result.rho)
                                 ? "NA"
                                 : String.format(Locale.ROOT, "%.6g", result.rho),
-                        result.method
+                        result.method,
+                        result.status
                 );
             }
         }
@@ -443,7 +447,7 @@ public final class DirectApaPipeline {
                             + "apa_change\tapa_direction\ttutr_direction\tale_direction\t"
                             + "ipa_direction\tinternal_exon_direction\tapa_event\tchanged_mechanisms\t"
                             + "mechanism_directions\tn_sites\tn_terminal_branches\tn_tutr_branches\t"
-                            + "control_wpi\tcase_wpi\tdelta_wpi\tapd\tcontrol_terminal_usage\t"
+                            + "control_wpi\tcase_wpi\tdelta_wpi\tapd\tusage_jsd\tcontrol_terminal_usage\t"
                             + "case_terminal_usage\tdelta_terminal_usage\tcontrol_ipa_usage\t"
                             + "case_ipa_usage\tdelta_ipa_usage\ttermination_shift_index\t"
                             + "termination_jsd\tale_switch_index\tale_jsd\tcontrol_ale_wpi\t"
@@ -482,6 +486,7 @@ public final class DirectApaPipeline {
         fields.add(fmt(result.caseWpi));
         fields.add(fmt(result.deltaWpi));
         fields.add(fmt(result.apd));
+        fields.add(fmt(result.usageJsd));
         fields.add(fmt(result.controlTerminalUsage));
         fields.add(fmt(result.caseTerminalUsage));
         fields.add(fmt(result.deltaTerminalUsage));

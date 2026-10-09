@@ -28,13 +28,16 @@ public final class DifferentialApa {
 
     public static final class SiteResult {
         public SiteCluster site;
-        public double controlPau;
-        public double casePau;
-        public double delta;
-        public double p;
-        public double q;
-        public double rho;
-        public String method;
+        public double controlPau = Double.NaN;
+        public double casePau = Double.NaN;
+        public double delta = Double.NaN;
+        public int controlReplicates;
+        public int caseReplicates;
+        public double p = Double.NaN;
+        public double q = Double.NaN;
+        public double rho = Double.NaN;
+        public String method = "not_tested";
+        public String status = "insufficient_evidence";
     }
 
     public static final class GeneResult {
@@ -62,7 +65,10 @@ public final class DifferentialApa {
         public double controlWpi;
         public double caseWpi;
         public double deltaWpi;
+        /** Total-variation distance between mean control and case PAU vectors. */
         public double apd;
+        /** Jensen-Shannon divergence between mean control and case PAU vectors. */
+        public double usageJsd;
         public double minFdr;
         public double ksD;
         public double ksSignedD;
@@ -253,20 +259,13 @@ public final class DifferentialApa {
 
         SiteResult result = new SiteResult();
         result.site = site;
+        result.controlReplicates = controlReplicates;
+        result.caseReplicates = caseReplicates;
         result.controlPau = controlPauSum / controlReplicates;
         result.casePau = casePauSum / caseReplicates;
         result.delta = result.casePau - result.controlPau;
 
-        if (controlReplicates >= 2 && caseReplicates >= 2) {
-            BetaBinomial.TestResult test = BetaBinomial.test(
-                    siteCounts,
-                    geneTotals,
-                    groups
-            );
-            result.p = test.pvalue;
-            result.rho = test.rho;
-            result.method = "beta-binomial-LRT";
-        } else {
+        if (controlReplicates == 1 && caseReplicates == 1) {
             int[] table = pooledTwoByTwo(siteCounts, geneTotals, groups);
             result.p = FisherExact.twoSided(
                     table[0],
@@ -274,9 +273,25 @@ public final class DifferentialApa {
                     table[2],
                     table[3]
             );
-            result.rho = Double.NaN;
-            result.method = "Fisher-exact";
+            result.method = "Fisher-exact-unreplicated";
+            result.status = "ok";
+            return result;
         }
+
+        if (controlReplicates < 2 || caseReplicates < 2) {
+            result.status = "insufficient_replicate_support";
+            return result;
+        }
+
+        BetaBinomial.TestResult test = BetaBinomial.test(
+                siteCounts,
+                geneTotals,
+                groups
+        );
+        result.p = test.pvalue;
+        result.rho = test.rho;
+        result.method = "beta-binomial-LRT";
+        result.status = "ok";
         return result;
     }
 
@@ -328,13 +343,29 @@ public final class DifferentialApa {
     }
 
     private static void applySiteFdr(List<SiteResult> results) {
-        double[] pValues = new double[results.size()];
+        List<Integer> testedIndices = new ArrayList<Integer>();
+        List<Double> testedPValues = new ArrayList<Double>();
+
         for (int index = 0; index < results.size(); index++) {
-            pValues[index] = results.get(index).p;
+            double p = results.get(index).p;
+            if (Double.isFinite(p)) {
+                testedIndices.add(index);
+                testedPValues.add(p);
+            }
         }
+
+        if (testedIndices.isEmpty()) {
+            return;
+        }
+
+        double[] pValues = new double[testedPValues.size()];
+        for (int index = 0; index < testedPValues.size(); index++) {
+            pValues[index] = testedPValues.get(index);
+        }
+
         double[] adjusted = MultipleTesting.bh(pValues);
-        for (int index = 0; index < results.size(); index++) {
-            results.get(index).q = adjusted[index];
+        for (int index = 0; index < testedIndices.size(); index++) {
+            results.get(testedIndices.get(index)).q = adjusted[index];
         }
     }
 
@@ -363,23 +394,22 @@ public final class DifferentialApa {
         Map<Integer, Integer> controlPositions = new TreeMap<Integer, Integer>();
         Map<Integer, Integer> casePositions = new TreeMap<Integer, Integer>();
 
-        double controlWpiSum = 0.0;
-        double caseWpiSum = 0.0;
         int controlReplicates = 0;
         int caseReplicates = 0;
 
         for (Sample sample : samples) {
+            // Gene-level distribution summaries are normalized across the
+            // retained PAS vector. Site-level PAU testing above continues to
+            // use the pre-filter annotated gene totals when they are supplied.
             int total = totalCount(geneSites, sample.name);
             if (total == 0) {
                 continue;
             }
 
-            double sampleWpi = 0.0;
             for (int siteIndex = 0; siteIndex < geneSites.size(); siteIndex++) {
                 SiteCluster site = geneSites.get(siteIndex);
                 int siteCount = count(site, sample.name);
                 double pau = (double) siteCount / total;
-                sampleWpi += pau * site.normalizedPosition;
 
                 if (sample.condition.equals(control)) {
                     controlMeanPau[siteIndex] += pau;
@@ -399,20 +429,37 @@ public final class DifferentialApa {
             }
 
             if (sample.condition.equals(control)) {
-                controlWpiSum += sampleWpi;
                 controlReplicates++;
             } else if (sample.condition.equals(caseCondition)) {
-                caseWpiSum += sampleWpi;
                 caseReplicates++;
             }
         }
 
-        result.controlWpi = mean(controlWpiSum, controlReplicates);
-        result.caseWpi = mean(caseWpiSum, caseReplicates);
-        averageInPlace(controlMeanPau, controlReplicates);
-        averageInPlace(caseMeanPau, caseReplicates);
-        result.deltaWpi = result.caseWpi - result.controlWpi;
-        result.apd = totalVariation(controlMeanPau, caseMeanPau);
+        ApaUsageMetrics.averageInPlace(controlMeanPau, controlReplicates);
+        ApaUsageMetrics.averageInPlace(caseMeanPau, caseReplicates);
+
+        double[] normalizedPositions = new double[geneSites.size()];
+        for (int index = 0; index < geneSites.size(); index++) {
+            normalizedPositions[index] = geneSites.get(index).normalizedPosition;
+        }
+
+        result.controlWpi = ApaUsageMetrics.weightedPositionIndex(
+                controlMeanPau,
+                normalizedPositions
+        );
+        result.caseWpi = ApaUsageMetrics.weightedPositionIndex(
+                caseMeanPau,
+                normalizedPositions
+        );
+        result.deltaWpi = finiteDifference(result.caseWpi, result.controlWpi);
+        result.apd = ApaUsageMetrics.totalVariationDistance(
+                controlMeanPau,
+                caseMeanPau
+        );
+        result.usageJsd = ApaUsageMetrics.jensenShannonDivergence(
+                controlMeanPau,
+                caseMeanPau
+        );
 
         TieAdjustedKs.Result ks = TieAdjustedKs.test(
                 controlPositions,
@@ -427,19 +474,20 @@ public final class DifferentialApa {
         result.ksFdr = 1.0;
 
         result.minFdr = 1.0;
-        boolean significantSiteChange = false;
         if (testedSites != null) {
             for (SiteResult siteResult : testedSites) {
-                result.minFdr = Math.min(result.minFdr, siteResult.q);
-                if (siteResult.q <= fdr && Math.abs(siteResult.delta) >= effect) {
-                    significantSiteChange = true;
+                if (Double.isFinite(siteResult.q)) {
+                    result.minFdr = Math.min(result.minFdr, siteResult.q);
                 }
             }
         }
 
-        result.apaChange = significantSiteChange;
-        result.apaDirection = direction(
-                significantSiteChange,
+        boolean supported = result.minFdr <= fdr;
+        result.apaChange = supported
+                && Double.isFinite(result.apd)
+                && result.apd >= effect;
+        result.apaDirection = ApaUsageMetrics.supportedDirection(
+                result.apaChange,
                 result.deltaWpi,
                 wpiThreshold
         );
@@ -462,38 +510,16 @@ public final class DifferentialApa {
             GeneResult gene = genes.get(index);
             gene.ksFdr = adjusted[index];
 
-            if (!"stable".equals(gene.apaDirection) || gene.ksFdr > fdr) {
-                continue;
-            }
-
-            if (gene.deltaWpi >= wpiThreshold) {
-                gene.apaDirection = "lengthening";
-                gene.apaChange = true;
-            } else if (gene.deltaWpi <= -wpiThreshold) {
-                gene.apaDirection = "shortening";
-                gene.apaChange = true;
-            } else if (gene.apd >= effect) {
-                gene.apaDirection = "no_directional_shift";
-                gene.apaChange = true;
-            }
+            boolean supported = gene.minFdr <= fdr || gene.ksFdr <= fdr;
+            gene.apaChange = supported
+                    && Double.isFinite(gene.apd)
+                    && gene.apd >= effect;
+            gene.apaDirection = ApaUsageMetrics.supportedDirection(
+                    gene.apaChange,
+                    gene.deltaWpi,
+                    wpiThreshold
+            );
         }
-    }
-
-    private static String direction(
-            boolean significant,
-            double deltaWpi,
-            double threshold
-    ) {
-        if (!significant) {
-            return "stable";
-        }
-        if (deltaWpi >= threshold) {
-            return "lengthening";
-        }
-        if (deltaWpi <= -threshold) {
-            return "shortening";
-        }
-        return "no_directional_shift";
     }
 
     private static Map<String, List<SiteCluster>> groupSitesByGene(
@@ -587,24 +613,10 @@ public final class DifferentialApa {
         counts.put(position, (previous == null ? 0 : previous) + value);
     }
 
-    private static double mean(double sum, int count) {
-        return count > 0 ? sum / count : 0.0;
-    }
-
-    private static void averageInPlace(double[] values, int count) {
-        if (count <= 0) {
-            return;
+    private static double finiteDifference(double right, double left) {
+        if (!Double.isFinite(right) || !Double.isFinite(left)) {
+            return Double.NaN;
         }
-        for (int index = 0; index < values.length; index++) {
-            values[index] /= count;
-        }
-    }
-
-    private static double totalVariation(double[] left, double[] right) {
-        double distance = 0.0;
-        for (int index = 0; index < left.length; index++) {
-            distance += Math.abs(right[index] - left[index]);
-        }
-        return 0.5 * distance;
+        return right - left;
     }
 }
