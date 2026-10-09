@@ -166,24 +166,8 @@ public final class ArchitectureCatalog {
         boolean hasTutr = entry.tutrBranches > 0;
         boolean hasAle = entry.terminalBranches > 1;
 
-        List<String> components = new ArrayList<String>();
-        if (hasTutr) {
-            components.add("TUTR");
-        }
-        if (hasAle) {
-            components.add("ALE");
-        }
-
-        entry.components = join(components, "+");
-        if (hasTutr && hasAle) {
-            entry.architectureClass = "mixed";
-        } else if (hasTutr) {
-            entry.architectureClass = "TUTR";
-        } else if (hasAle) {
-            entry.architectureClass = "ALE";
-        } else {
-            entry.architectureClass = "none";
-        }
+        entry.components = ApaArchitecture.components(hasTutr, hasAle);
+        entry.architectureClass = ApaArchitecture.classify(hasTutr, hasAle);
     }
 
     private static Map<String, List<TranscriptModel>> groupByGene(

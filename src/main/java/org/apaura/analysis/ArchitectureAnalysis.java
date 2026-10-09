@@ -249,15 +249,11 @@ public final class ArchitectureAnalysis {
         return count;
     }
 
-    private static String architectureComponents(boolean hasTutr, boolean hasAle) {
-        List<String> components = new ArrayList<String>();
-        if (hasTutr) {
-            components.add("TUTR");
-        }
-        if (hasAle) {
-            components.add("ALE");
-        }
-        return join(components, "+");
+    private static String architectureComponents(
+            boolean hasTutr,
+            boolean hasAle
+    ) {
+        return ApaArchitecture.components(hasTutr, hasAle);
     }
 
     private static void accumulateSample(
@@ -831,17 +827,11 @@ public final class ArchitectureAnalysis {
         return gene.apaType + ":" + gene.apaDirection;
     }
 
-    private static String architectureClass(boolean hasTutr, boolean hasAle) {
-        if (hasTutr && hasAle) {
-            return "mixed";
-        }
-        if (hasTutr) {
-            return "TUTR";
-        }
-        if (hasAle) {
-            return "ALE";
-        }
-        return "none";
+    private static String architectureClass(
+            boolean hasTutr,
+            boolean hasAle
+    ) {
+        return ApaArchitecture.classify(hasTutr, hasAle);
     }
 
     private static Map<String, List<SiteCluster>> groupByGene(List<SiteCluster> sites) {
