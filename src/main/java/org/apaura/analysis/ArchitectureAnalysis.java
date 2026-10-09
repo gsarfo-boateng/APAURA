@@ -226,11 +226,13 @@ public final class ArchitectureAnalysis {
         boolean hasAle = branches.size() >= 2;
         boolean hasTutr = metrics.nTutrBranches > 0;
         metrics.components = architectureComponents(hasTutr, hasAle);
-        metrics.architectureClass = architectureClass(
-                metrics.nTerminalBranches,
-                metrics.nTutrBranches,
-                countTerminalPas(branches)
-        );
+        metrics.architectureClass = hasUnresolvedTerminalPas(geneSites)
+                ? ApaArchitecture.UNRESOLVED
+                : architectureClass(
+                        metrics.nTerminalBranches,
+                        metrics.nTutrBranches,
+                        countTerminalPas(branches)
+                );
 
         Strand strand = geneSites.get(0).strand;
         List<Integer> anchors = orderedAnchors(branches, strand);
@@ -628,6 +630,7 @@ public final class ArchitectureAnalysis {
             classifyIpa(
                     gene,
                     metrics,
+                    fdr,
                     ipaThreshold,
                     activeDirections,
                     changedMechanisms,
@@ -636,6 +639,7 @@ public final class ArchitectureAnalysis {
             classifyAle(
                     gene,
                     metrics,
+                    fdr,
                     aleThreshold,
                     tutrThreshold,
                     activeDirections,
@@ -645,6 +649,7 @@ public final class ArchitectureAnalysis {
             classifyTutr(
                     gene,
                     metrics,
+                    fdr,
                     tutrThreshold,
                     activeDirections,
                     changedMechanisms,
@@ -653,6 +658,7 @@ public final class ArchitectureAnalysis {
             classifyInternalExon(
                     gene,
                     metrics,
+                    fdr,
                     internalExonThreshold,
                     activeDirections,
                     changedMechanisms,
@@ -693,12 +699,14 @@ public final class ArchitectureAnalysis {
     private static void classifyIpa(
             DifferentialApa.GeneResult gene,
             Metrics metrics,
+            double fdr,
             double threshold,
             List<String> activeDirections,
             List<String> changedMechanisms,
             List<String> mechanismDirections
     ) {
-        if ("not_applicable".equals(gene.ipaDirection)
+        if (gene.ipaMinFdr > fdr
+                || "not_applicable".equals(gene.ipaDirection)
                 || Math.abs(metrics.deltaIpaUsage) < threshold) {
             return;
         }
@@ -716,13 +724,15 @@ public final class ArchitectureAnalysis {
     private static void classifyAle(
             DifferentialApa.GeneResult gene,
             Metrics metrics,
+            double fdr,
             double switchThreshold,
             double directionThreshold,
             List<String> activeDirections,
             List<String> changedMechanisms,
             List<String> mechanismDirections
     ) {
-        if ("not_applicable".equals(gene.aleDirection)
+        if (gene.aleMinFdr > fdr
+                || "not_applicable".equals(gene.aleDirection)
                 || metrics.aleSwitchIndex < switchThreshold) {
             return;
         }
@@ -748,12 +758,14 @@ public final class ArchitectureAnalysis {
     private static void classifyTutr(
             DifferentialApa.GeneResult gene,
             Metrics metrics,
+            double fdr,
             double threshold,
             List<String> activeDirections,
             List<String> changedMechanisms,
             List<String> mechanismDirections
     ) {
-        if ("not_applicable".equals(gene.tutrDirection)
+        if (gene.tutrMinFdr > fdr
+                || "not_applicable".equals(gene.tutrDirection)
                 || metrics.tutrShiftMagnitude < threshold) {
             return;
         }
@@ -779,12 +791,14 @@ public final class ArchitectureAnalysis {
     private static void classifyInternalExon(
             DifferentialApa.GeneResult gene,
             Metrics metrics,
+            double fdr,
             double threshold,
             List<String> activeDirections,
             List<String> changedMechanisms,
             List<String> mechanismDirections
     ) {
-        if ("not_applicable".equals(gene.internalExonDirection)
+        if (gene.internalExonMinFdr > fdr
+                || "not_applicable".equals(gene.internalExonDirection)
                 || Math.abs(metrics.deltaInternalUsage) < threshold) {
             return;
         }
@@ -846,6 +860,17 @@ public final class ArchitectureAnalysis {
                     : "multi_mechanism:complex";
         }
         return gene.apaType + ":" + gene.apaDirection;
+    }
+
+    private static boolean hasUnresolvedTerminalPas(
+            List<SiteCluster> geneSites
+    ) {
+        for (SiteCluster site : geneSites) {
+            if (site.terminalExon && site.terminalStructureAnchor0 < 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static String architectureClass(

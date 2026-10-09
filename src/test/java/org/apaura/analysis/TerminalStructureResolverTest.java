@@ -1,11 +1,13 @@
 package org.apaura.analysis;
 
+import org.apaura.model.Sample;
 import org.apaura.model.SiteCluster;
 import org.apaura.model.Strand;
 import org.apaura.model.TranscriptModel;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -79,6 +81,49 @@ class TerminalStructureResolverTest {
 
         assertEquals("TUTR", proximal.architectureRole);
         assertEquals("TUTR", distal.architectureRole);
+    }
+
+
+    @Test
+    void retainedTerminalPasWithoutResolvedStructureForcesUnresolvedArchitecture() {
+        SiteCluster resolved = site(
+                "PAS1",
+                499,
+                100
+        );
+        resolved.terminalStructureAnchor0 = 100;
+        resolved.region = "3UTR";
+
+        SiteCluster unresolved = site(
+                "PAS2",
+                599,
+                140
+        );
+        unresolved.terminalStructureAnchor0 = -1;
+        unresolved.region = "3UTR";
+
+        resolved.counts.put("C1", 10);
+        resolved.counts.put("T1", 10);
+        unresolved.counts.put("C1", 10);
+        unresolved.counts.put("T1", 10);
+
+        Map<String, ArchitectureAnalysis.Metrics> metrics =
+                ArchitectureAnalysis.analyze(
+                        Arrays.asList(
+                                new Sample("C1", "control", "C1.bam"),
+                                new Sample("T1", "case", "T1.bam")
+                        ),
+                        Arrays.asList(resolved, unresolved),
+                        "control",
+                        "case"
+                );
+
+        ArchitectureAnalysis.Metrics gene = metrics.get("G1");
+        assertEquals("UNRESOLVED", gene.architectureClass);
+        assertEquals(1, gene.nTerminalBranches);
+        assertEquals(0, gene.nTutrBranches);
+        assertEquals("terminal", resolved.architectureRole);
+        assertEquals("other", unresolved.architectureRole);
     }
 
     private static TranscriptModel transcript(

@@ -70,6 +70,14 @@ public final class DifferentialApa {
         /** Jensen-Shannon divergence between mean control and case PAU vectors. */
         public double usageJsd;
         public double minFdr;
+        /** Minimum site FDR among sites that belong to the resolved TUTR mechanism. */
+        public double tutrMinFdr = 1.0;
+        /** Minimum site FDR among sites that belong to the resolved ALE mechanism. */
+        public double aleMinFdr = 1.0;
+        /** Minimum site FDR among sites annotated as intronic polyadenylation. */
+        public double ipaMinFdr = 1.0;
+        /** Minimum site FDR among sites annotated as internal-exon termination. */
+        public double internalExonMinFdr = 1.0;
         public double ksD;
         public double ksSignedD;
         public double ksZ;
@@ -476,9 +484,11 @@ public final class DifferentialApa {
         result.minFdr = 1.0;
         if (testedSites != null) {
             for (SiteResult siteResult : testedSites) {
-                if (Double.isFinite(siteResult.q)) {
-                    result.minFdr = Math.min(result.minFdr, siteResult.q);
+                if (!Double.isFinite(siteResult.q)) {
+                    continue;
                 }
+                result.minFdr = Math.min(result.minFdr, siteResult.q);
+                updateMechanismMinFdr(result, siteResult);
             }
         }
 
@@ -492,6 +502,27 @@ public final class DifferentialApa {
                 wpiThreshold
         );
         return result;
+    }
+
+    private static void updateMechanismMinFdr(
+            GeneResult result,
+            SiteResult siteResult
+    ) {
+        String role = siteResult.site.architectureRole;
+        double q = siteResult.q;
+
+        if ("TUTR".equals(role) || "ALE+TUTR".equals(role)) {
+            result.tutrMinFdr = Math.min(result.tutrMinFdr, q);
+        }
+        if ("ALE".equals(role) || "ALE+TUTR".equals(role)) {
+            result.aleMinFdr = Math.min(result.aleMinFdr, q);
+        }
+        if ("IPA".equals(role)) {
+            result.ipaMinFdr = Math.min(result.ipaMinFdr, q);
+        }
+        if ("internal_exon".equals(role)) {
+            result.internalExonMinFdr = Math.min(result.internalExonMinFdr, q);
+        }
     }
 
     private static void applyGeneFdr(

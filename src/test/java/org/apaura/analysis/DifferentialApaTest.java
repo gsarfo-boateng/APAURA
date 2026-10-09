@@ -108,6 +108,145 @@ class DifferentialApaTest {
         }
     }
 
+
+    @Test
+    void changedMechanismRequiresSignificantSiteWithinThatMechanism() {
+        List<Sample> samples = Arrays.asList(
+                new Sample("C1", "control", "C1.bam"),
+                new Sample("T1", "case", "T1.bam")
+        );
+
+        SiteCluster tutrProximal = site("PAS1", 100, 1, 0.0);
+        SiteCluster tutrDistal = site("PAS2", 200, 2, 1.0 / 3.0);
+
+        SiteCluster internal = new SiteCluster(
+                "PAS3", "chr1", Strand.PLUS, 300, 300, 300
+        );
+        internal.geneId = "G1";
+        internal.geneName = "GENE1";
+        internal.biotype = "protein_coding";
+        internal.region = "EXON_CODING";
+        internal.siteRank = 3;
+        internal.normalizedPosition = 2.0 / 3.0;
+
+        SiteCluster downstream = new SiteCluster(
+                "PAS4", "chr1", Strand.PLUS, 400, 400, 400
+        );
+        downstream.geneId = "G1";
+        downstream.geneName = "GENE1";
+        downstream.biotype = "protein_coding";
+        downstream.region = "DOWNSTREAM_3P";
+        downstream.siteRank = 4;
+        downstream.normalizedPosition = 1.0;
+
+        List<SiteCluster> sites = Arrays.asList(
+                tutrProximal,
+                tutrDistal,
+                internal,
+                downstream
+        );
+
+        setCounts(sites, "C1", new int[]{6, 4, 100, 0});
+        setCounts(sites, "T1", new int[]{4, 6, 0, 100});
+
+        ArchitectureAnalysis.annotateSiteRoles(sites);
+
+        DifferentialApa.Results differential = DifferentialApa.run(
+                samples,
+                sites,
+                "control",
+                "case",
+                1,
+                0.10,
+                0.05,
+                0.10
+        );
+
+        ArchitectureAnalysis.enrichGeneResults(
+                differential.genes,
+                ArchitectureAnalysis.analyze(
+                        samples,
+                        sites,
+                        "control",
+                        "case"
+                ),
+                0.05,
+                0.10,
+                0.10,
+                0.10,
+                0.10
+        );
+
+        DifferentialApa.GeneResult gene = differential.genes.get(0);
+
+        assertTrue(gene.tutrShiftMagnitude >= 0.10);
+        assertTrue(gene.tutrMinFdr > 0.05);
+        assertTrue(gene.internalExonMinFdr <= 0.05);
+        assertEquals("stable", gene.tutrDirection);
+        assertEquals("internal_exon", gene.changedMechanisms);
+        assertEquals("internal_exon:loss", gene.apaEvent);
+        assertTrue(gene.apaChange);
+    }
+
+    @Test
+    void unresolvedArchitectureCanRetainSupportedLocalTutrSignal() {
+        List<Sample> samples = Arrays.asList(
+                new Sample("C1", "control", "C1.bam"),
+                new Sample("T1", "case", "T1.bam")
+        );
+
+        SiteCluster proximal = site("PAS1", 100, 1, 0.0);
+        SiteCluster distal = site("PAS2", 200, 2, 0.5);
+
+        SiteCluster unresolved = site("PAS3", 300, 3, 1.0);
+        unresolved.terminalStructureAnchor0 = -1;
+        unresolved.region = "3UTR";
+
+        List<SiteCluster> sites = Arrays.asList(
+                proximal, distal, unresolved
+        );
+
+        setCounts(sites, "C1", new int[]{90, 10, 10});
+        setCounts(sites, "T1", new int[]{10, 90, 10});
+
+        ArchitectureAnalysis.annotateSiteRoles(sites);
+
+        DifferentialApa.Results differential = DifferentialApa.run(
+                samples,
+                sites,
+                "control",
+                "case",
+                1,
+                0.10,
+                0.05,
+                0.10
+        );
+
+        ArchitectureAnalysis.enrichGeneResults(
+                differential.genes,
+                ArchitectureAnalysis.analyze(
+                        samples,
+                        sites,
+                        "control",
+                        "case"
+                ),
+                0.05,
+                0.10,
+                0.10,
+                0.10,
+                0.10
+        );
+
+        DifferentialApa.GeneResult gene = differential.genes.get(0);
+
+        assertEquals("UNRESOLVED", gene.apaType);
+        assertEquals("TUTR", gene.architectureComponents);
+        assertTrue(gene.tutrMinFdr <= 0.05);
+        assertEquals("TUTR", gene.changedMechanisms);
+        assertEquals("lengthening", gene.tutrDirection);
+        assertTrue(gene.apaChange);
+    }
+
     private static List<SiteCluster> fourSites() {
         List<SiteCluster> sites = new ArrayList<SiteCluster>();
         sites.add(site("PAS1", 100, 1, 0.0));
