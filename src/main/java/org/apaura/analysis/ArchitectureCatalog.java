@@ -167,7 +167,11 @@ public final class ArchitectureCatalog {
         boolean hasAle = entry.terminalBranches > 1;
 
         entry.components = ApaArchitecture.components(hasTutr, hasAle);
-        entry.architectureClass = ApaArchitecture.classify(hasTutr, hasAle);
+        entry.architectureClass = ApaArchitecture.classify(
+                entry.terminalBranches,
+                entry.tutrBranches,
+                entry.terminalPas
+        );
     }
 
     private static Map<String, List<TranscriptModel>> groupByGene(

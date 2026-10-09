@@ -3,34 +3,41 @@ package org.apaura.analysis;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ApaArchitectureTest {
 
     @Test
-    void classifiesCurrentTerminalArchitecturesConsistently() {
+    void classifiesTerminalArchitectureFromStructureAndPasCounts() {
         assertEquals(
-                "none",
-                ApaArchitecture.classify(false, false)
+                "UNRESOLVED",
+                ApaArchitecture.classify(0, 0, 0)
+        );
+
+        assertEquals(
+                "SINGLE_PAS",
+                ApaArchitecture.classify(1, 0, 1)
         );
 
         assertEquals(
                 "TUTR",
-                ApaArchitecture.classify(true, false)
+                ApaArchitecture.classify(1, 1, 2)
         );
 
         assertEquals(
                 "ALE",
-                ApaArchitecture.classify(false, true)
+                ApaArchitecture.classify(2, 0, 2)
         );
 
         assertEquals(
                 "mixed",
-                ApaArchitecture.classify(true, true)
+                ApaArchitecture.classify(2, 1, 3)
         );
     }
 
     @Test
-    void reportsCurrentArchitectureComponentsConsistently() {
+    void reportsOnlyAlternativeArchitectureComponents() {
         assertEquals(
                 "none",
                 ApaArchitecture.components(false, false)
@@ -49,6 +56,29 @@ class ApaArchitectureTest {
         assertEquals(
                 "TUTR+ALE",
                 ApaArchitecture.components(true, true)
+        );
+    }
+
+    @Test
+    void distinguishesAlternativeArchitectureFromSinglePasStructure() {
+        assertFalse(
+                ApaArchitecture.isAlternativeTerminalArchitecture("SINGLE_PAS")
+        );
+
+        assertFalse(
+                ApaArchitecture.isAlternativeTerminalArchitecture("UNRESOLVED")
+        );
+
+        assertTrue(
+                ApaArchitecture.isAlternativeTerminalArchitecture("TUTR")
+        );
+
+        assertTrue(
+                ApaArchitecture.isAlternativeTerminalArchitecture("ALE")
+        );
+
+        assertTrue(
+                ApaArchitecture.isAlternativeTerminalArchitecture("mixed")
         );
     }
 }

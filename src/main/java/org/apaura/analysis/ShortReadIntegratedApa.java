@@ -92,7 +92,10 @@ public final class ShortReadIntegratedApa {
             ShortReadAle.GeneResult ale = aleByGene.get(entry.geneId);
             ShortReadIpa.GeneResult ipa = ipaByGene.get(entry.geneId);
 
-            boolean terminalArchitecture = !"none".equals(entry.architectureClass);
+            boolean terminalArchitecture =
+                    ApaArchitecture.isAlternativeTerminalArchitecture(
+                            entry.architectureClass
+                    );
             if (!terminalArchitecture && ipa == null) {
                 continue;
             }

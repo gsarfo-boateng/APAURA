@@ -26,7 +26,7 @@ class ArchitectureCatalogTest {
 
         assertEquals(1, entries.size());
         ArchitectureCatalog.Entry entry = entries.get(0);
-        assertEquals("none", entry.architectureClass);
+        assertEquals("SINGLE_PAS", entry.architectureClass);
         assertEquals("none", entry.components);
         assertEquals(2, entry.transcripts);
         assertEquals(1, entry.terminalBranches);

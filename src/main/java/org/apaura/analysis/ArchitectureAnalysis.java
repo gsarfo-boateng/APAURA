@@ -219,7 +219,11 @@ public final class ArchitectureAnalysis {
         boolean hasAle = branches.size() >= 2;
         boolean hasTutr = metrics.nTutrBranches > 0;
         metrics.components = architectureComponents(hasTutr, hasAle);
-        metrics.architectureClass = architectureClass(hasTutr, hasAle);
+        metrics.architectureClass = architectureClass(
+                metrics.nTerminalBranches,
+                metrics.nTutrBranches,
+                countTerminalPas(branches)
+        );
 
         Strand strand = geneSites.get(0).strand;
         List<Integer> anchors = orderedAnchors(branches, strand);
@@ -245,6 +249,16 @@ public final class ArchitectureAnalysis {
             if (branch.size() >= 2) {
                 count++;
             }
+        }
+        return count;
+    }
+
+    private static int countTerminalPas(
+            Map<Integer, List<SiteCluster>> branches
+    ) {
+        int count = 0;
+        for (List<SiteCluster> sites : branches.values()) {
+            count += sites.size();
         }
         return count;
     }
@@ -828,10 +842,15 @@ public final class ArchitectureAnalysis {
     }
 
     private static String architectureClass(
-            boolean hasTutr,
-            boolean hasAle
+            int terminalStructures,
+            int tutrStructures,
+            int terminalPas
     ) {
-        return ApaArchitecture.classify(hasTutr, hasAle);
+        return ApaArchitecture.classify(
+                terminalStructures,
+                tutrStructures,
+                terminalPas
+        );
     }
 
     private static Map<String, List<SiteCluster>> groupByGene(List<SiteCluster> sites) {

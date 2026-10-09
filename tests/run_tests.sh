@@ -97,7 +97,7 @@ java -jar APAURA.jar run-direct \
   --out tests/out_architecture
 grep -P -q '^TUTR1\tTUTR1\tprotein_coding\tTUTR\tTUTR\tyes\tshortening\tshortening\tnot_applicable\tnot_applicable\tnot_applicable\tTUTR:shortening\tTUTR\tTUTR=shortening' tests/out_architecture/apa.tsv
 grep -P -q '^ALE1\tALE1\tprotein_coding\tALE\tALE\tyes\tdistal_switch\tnot_applicable\tdistal_switch\tnot_applicable\tnot_applicable\tALE:distal_switch\tALE\tALE=distal_switch' tests/out_architecture/apa.tsv
-grep -P -q '^IPA1\tIPA1\tprotein_coding\tnone\tnone\tyes\tgain\tnot_applicable\tnot_applicable\tgain\tnot_applicable\tIPA:gain\tIPA\tIPA=gain' tests/out_architecture/apa.tsv
+grep -P -q '^IPA1\tIPA1\tprotein_coding\tSINGLE_PAS\tnone\tyes\tgain\tnot_applicable\tnot_applicable\tgain\tnot_applicable\tIPA:gain\tIPA\tIPA=gain' tests/out_architecture/apa.tsv
 grep -P -q '^MIX1\tMIX1\tprotein_coding\tmixed\tTUTR\+ALE\tyes\tcomplex\tshortening\tdistal_switch\tnot_applicable\tnot_applicable\tmixed:complex\tALE\+TUTR\tALE=distal_switch;TUTR=shortening' tests/out_architecture/apa.tsv
 grep -P -q '^NODIR1\tNODIR1\tprotein_coding\tTUTR\tTUTR\tyes\tno_directional_shift\tno_directional_shift\tnot_applicable\tnot_applicable\tnot_applicable\tTUTR:no_directional_shift\tTUTR\tTUTR=no_directional_shift' tests/out_architecture/apa.tsv
 grep -P -q '^TUTRIPA1\tTUTRIPA1\tprotein_coding\tTUTR\tTUTR\tyes\tcomplex\tshortening\tnot_applicable\tgain\tnot_applicable\tmulti_mechanism:complex\tIPA\+TUTR\tIPA=gain;TUTR=shortening' tests/out_architecture/apa.tsv
