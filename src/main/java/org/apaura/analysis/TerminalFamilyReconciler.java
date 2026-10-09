@@ -38,6 +38,7 @@ final class TerminalFamilyReconciler {
         final boolean coding;
         final int sourceAnchorBuckets;
         final int transcriptCount;
+        final List<Integer> sourceAnchors;
         final List<Integer> pasPositions;
 
         Family(
@@ -50,6 +51,7 @@ final class TerminalFamilyReconciler {
                 boolean coding,
                 int sourceAnchorBuckets,
                 int transcriptCount,
+                List<Integer> sourceAnchors,
                 List<Integer> pasPositions
         ) {
             this.geneId = geneId;
@@ -61,6 +63,9 @@ final class TerminalFamilyReconciler {
             this.coding = coding;
             this.sourceAnchorBuckets = sourceAnchorBuckets;
             this.transcriptCount = transcriptCount;
+            this.sourceAnchors = Collections.unmodifiableList(
+                    new ArrayList<Integer>(sourceAnchors)
+            );
             this.pasPositions = Collections.unmodifiableList(
                     new ArrayList<Integer>(pasPositions)
             );
@@ -301,48 +306,68 @@ final class TerminalFamilyReconciler {
         }
     }
 
-    private static Family toFamily(List<AnchorBucket> buckets) {
-        AnchorBucket first = buckets.get(0);
-        Set<Integer> positions = new LinkedHashSet<Integer>();
-        boolean coding = false;
-        String biotype = ".";
-        int transcriptCount = 0;
-        int anchor0 = first.conservativeAnchor0;
+        private static Family toFamily(List<AnchorBucket> buckets) {
+            AnchorBucket first = buckets.get(0);
 
-        for (AnchorBucket bucket : buckets) {
-            positions.addAll(bucket.canonicalPas);
-            coding |= bucket.coding;
-            biotype = preferredBiotype(biotype, bucket.biotype);
-            transcriptCount += bucket.transcripts.size();
+            Set<Integer> positions = new LinkedHashSet<Integer>();
+            Set<Integer> sourceAnchors = new LinkedHashSet<Integer>();
 
-            if (buckets.size() > 1) {
-                if (first.strand == Strand.MINUS) {
-                    anchor0 = Math.min(anchor0, bucket.conservativeAnchor0);
-                } else {
-                    anchor0 = Math.max(anchor0, bucket.conservativeAnchor0);
+            boolean coding = false;
+            String biotype = ".";
+            int transcriptCount = 0;
+            int anchor0 = first.conservativeAnchor0;
+
+            for (AnchorBucket bucket : buckets) {
+                positions.addAll(bucket.canonicalPas);
+                coding |= bucket.coding;
+                biotype = preferredBiotype(biotype, bucket.biotype);
+                transcriptCount += bucket.transcripts.size();
+
+                for (TranscriptModel transcript : bucket.transcripts) {
+                    sourceAnchors.add(transcript.terminalExonAnchor0());
+                }
+
+                if (buckets.size() > 1) {
+                    if (first.strand == Strand.MINUS) {
+                        anchor0 = Math.min(
+                                anchor0,
+                                bucket.conservativeAnchor0
+                        );
+                    } else {
+                        anchor0 = Math.max(
+                                anchor0,
+                                bucket.conservativeAnchor0
+                        );
+                    }
                 }
             }
-        }
 
-        List<Integer> orderedPositions = new ArrayList<Integer>(positions);
-        Collections.sort(orderedPositions);
-        if (first.strand == Strand.MINUS) {
-            Collections.reverse(orderedPositions);
-        }
+            List<Integer> orderedSourceAnchors =
+                    new ArrayList<Integer>(sourceAnchors);
+            Collections.sort(orderedSourceAnchors);
 
-        return new Family(
-                first.geneId,
-                first.geneName,
-                biotype,
-                first.chrom,
-                first.strand,
-                anchor0,
-                coding,
-                buckets.size(),
-                transcriptCount,
-                orderedPositions
-        );
-    }
+            List<Integer> orderedPositions =
+                    new ArrayList<Integer>(positions);
+            Collections.sort(orderedPositions);
+
+            if (first.strand == Strand.MINUS) {
+                Collections.reverse(orderedPositions);
+            }
+
+            return new Family(
+                    first.geneId,
+                    first.geneName,
+                    biotype,
+                    first.chrom,
+                    first.strand,
+                    anchor0,
+                    coding,
+                    buckets.size(),
+                    transcriptCount,
+                    orderedSourceAnchors,
+                    orderedPositions
+            );
+        }
 
     private static String preferredBiotype(String left, String right) {
         if ("protein_coding".equals(left) || "protein_coding".equals(right)) {
