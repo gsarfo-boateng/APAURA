@@ -241,6 +241,8 @@ public final class DifferentialApa {
         double casePauSum = 0.0;
         int controlReplicates = 0;
         int caseReplicates = 0;
+        int controlDesignReplicates = 0;
+        int caseDesignReplicates = 0;
 
         for (int index = 0; index < sampleCount; index++) {
             Sample sample = samples.get(index);
@@ -248,12 +250,14 @@ public final class DifferentialApa {
 
             if (sample.condition.equals(control)) {
                 groups[index] = 0;
+                controlDesignReplicates++;
                 if (geneTotals[index] > 0) {
                     controlReplicates++;
                     controlPauSum += (double) siteCounts[index] / geneTotals[index];
                 }
             } else if (sample.condition.equals(caseCondition)) {
                 groups[index] = 1;
+                caseDesignReplicates++;
                 if (geneTotals[index] > 0) {
                     caseReplicates++;
                     casePauSum += (double) siteCounts[index] / geneTotals[index];
@@ -273,7 +277,13 @@ public final class DifferentialApa {
         result.casePau = casePauSum / caseReplicates;
         result.delta = result.casePau - result.controlPau;
 
-        if (controlReplicates == 1 && caseReplicates == 1) {
+        boolean genuinelyUnreplicatedDesign =
+                controlDesignReplicates == 1
+                        && caseDesignReplicates == 1;
+
+        if (genuinelyUnreplicatedDesign
+                && controlReplicates == 1
+                && caseReplicates == 1) {
             int[] table = pooledTwoByTwo(siteCounts, geneTotals, groups);
             result.p = FisherExact.twoSided(
                     table[0],

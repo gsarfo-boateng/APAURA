@@ -79,6 +79,52 @@ class DifferentialApaTest {
     }
 
     @Test
+    void replicatedDesignWithOneEvaluableSamplePerGroupDoesNotUseFisherExact() {
+        List<Sample> samples = Arrays.asList(
+                new Sample("C1", "control", "C1.bam"),
+                new Sample("C2", "control", "C2.bam"),
+                new Sample("C3", "control", "C3.bam"),
+                new Sample("T1", "case", "T1.bam"),
+                new Sample("T2", "case", "T2.bam"),
+                new Sample("T3", "case", "T3.bam")
+        );
+
+        List<SiteCluster> sites = twoSites();
+
+        // Replicated 3-vs-3 design in which this gene is evaluable
+        // in only one biological sample from each condition.
+        setCounts(sites, "C1", new int[]{90, 10});
+        setCounts(sites, "C2", new int[]{0, 0});
+        setCounts(sites, "C3", new int[]{0, 0});
+        setCounts(sites, "T1", new int[]{0, 0});
+        setCounts(sites, "T2", new int[]{0, 0});
+        setCounts(sites, "T3", new int[]{10, 90});
+
+        DifferentialApa.Results results = DifferentialApa.run(
+                samples,
+                sites,
+                "control",
+                "case",
+                1,
+                0.10,
+                0.05,
+                0.10
+        );
+
+        for (DifferentialApa.SiteResult site : results.sites) {
+            assertEquals(1, site.controlReplicates);
+            assertEquals(1, site.caseReplicates);
+            assertEquals("not_tested", site.method);
+            assertEquals(
+                    "insufficient_replicate_support",
+                    site.status
+            );
+            assertTrue(Double.isNaN(site.p));
+            assertTrue(Double.isNaN(site.q));
+        }
+    }
+
+    @Test
     void genuineOneVsOneUsesFisherExact() {
         List<Sample> samples = Arrays.asList(
                 new Sample("C1", "control", "C1.bam"),
