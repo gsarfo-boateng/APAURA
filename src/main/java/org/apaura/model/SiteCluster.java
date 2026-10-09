@@ -20,7 +20,15 @@ public final class SiteCluster {
     public double normalizedPosition = Double.NaN;
 
     /** 5' anchor of the matched terminal exon, or -1 when not applicable. */
+    /** Raw 5' anchor of the matched GTF terminal exon, or -1 when not applicable. */
     public int terminalExonAnchor0 = -1;
+
+    /**
+     * Reconciled terminal-structure anchor, or -1 when the site is not assigned
+     * to a resolved terminal structure.
+     */
+    public int terminalStructureAnchor0 = -1;
+
     public boolean terminalExon = false;
 
     /** Gene-architecture role assigned after annotation. */

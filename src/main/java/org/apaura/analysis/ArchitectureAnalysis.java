@@ -146,10 +146,17 @@ public final class ArchitectureAnalysis {
             Map<Integer, Integer> branchRanks,
             boolean hasAle
     ) {
-        if (site.terminalExon && site.terminalExonAnchor0 >= 0) {
-            Integer rank = branchRanks.get(site.terminalExonAnchor0);
-            site.terminalBranchRank = rank == null ? -1 : rank;
-            int branchSize = branches.get(site.terminalExonAnchor0).size();
+        if (site.terminalExon &&
+                site.terminalStructureAnchor0 >= 0) {
+            Integer rank = branchRanks.get(
+                    site.terminalStructureAnchor0
+            );
+            site.terminalBranchRank =
+                    rank == null ? -1 : rank;
+
+            int branchSize = branches.get(
+                    site.terminalStructureAnchor0
+            ).size();
 
             if (hasAle && branchSize > 1) {
                 site.architectureRole = "ALE+TUTR";
@@ -878,17 +885,29 @@ public final class ArchitectureAnalysis {
                 new LinkedHashMap<Integer, List<SiteCluster>>();
 
         for (SiteCluster site : geneSites) {
-            if (!site.terminalExon || site.terminalExonAnchor0 < 0) {
+            if (!site.terminalExon
+                    || site.terminalStructureAnchor0 < 0) {
                 continue;
             }
 
-            List<SiteCluster> branchSites = branches.get(site.terminalExonAnchor0);
+            List<SiteCluster> branchSites =
+                    branches.get(
+                            site.terminalStructureAnchor0
+                    );
+
             if (branchSites == null) {
-                branchSites = new ArrayList<SiteCluster>();
-                branches.put(site.terminalExonAnchor0, branchSites);
+                branchSites =
+                        new ArrayList<SiteCluster>();
+
+                branches.put(
+                        site.terminalStructureAnchor0,
+                        branchSites
+                );
             }
+
             branchSites.add(site);
         }
+
         return branches;
     }
 

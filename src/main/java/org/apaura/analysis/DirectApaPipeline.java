@@ -127,7 +127,16 @@ public final class DirectApaPipeline {
 
         GtfAnnotation annotation = GtfAnnotation.load(gtf);
         annotation.annotate(allSites, annotationSlop);
-        writeSites(new File(outputDirectory, "pas_all.bed"), allSites);
+
+        TerminalStructureResolver.assign(
+                annotation.transcripts(),
+                allSites
+        );
+
+        writeSites(
+                new File(outputDirectory, "pas_all.bed"),
+                allSites
+        );
 
         DirectSiteFilter.Result filtered = DirectSiteFilter.filter(
                 samples,

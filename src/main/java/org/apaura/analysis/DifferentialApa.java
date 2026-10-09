@@ -501,15 +501,18 @@ public final class DifferentialApa {
     ) {
         Map<String, List<SiteCluster>> grouped =
                 new LinkedHashMap<String, List<SiteCluster>>();
+
         for (SiteCluster site : sites) {
             if (".".equals(site.geneId)) {
                 continue;
             }
+
             grouped.computeIfAbsent(
                     site.geneId,
                     key -> new ArrayList<SiteCluster>()
             ).add(site);
         }
+
         return grouped;
     }
 
@@ -532,22 +535,30 @@ public final class DifferentialApa {
             return "none";
         }
 
-        Set<Integer> terminalAnchors = new LinkedHashSet<Integer>();
+        Set<Integer> terminalAnchors =
+                new LinkedHashSet<Integer>();
+
         boolean allTerminal = true;
+
         for (SiteCluster site : sites) {
-            if (!site.terminalExon) {
+            if (!site.terminalExon
+                    || site.terminalStructureAnchor0 < 0) {
                 allTerminal = false;
-            } else if (site.terminalExonAnchor0 >= 0) {
-                terminalAnchors.add(site.terminalExonAnchor0);
+            } else {
+                terminalAnchors.add(
+                        site.terminalStructureAnchor0
+                );
             }
         }
 
         if (allTerminal && terminalAnchors.size() > 1) {
             return "ALE";
         }
+
         if (allTerminal && terminalAnchors.size() == 1) {
             return "TUTR";
         }
+
         return "none";
     }
 
