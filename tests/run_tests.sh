@@ -230,9 +230,15 @@ test -s tests/out_sc_compare/all_results.tsv
 test -s tests/out_sc_compare/all_results.with_architecture.tsv
 test -s tests/out_sc_compare/observed_unreplicated_events.tsv
 test -s tests/out_sc_compare/observed_unreplicated_events.with_architecture.tsv
+test -s tests/out_sc_compare/apaura_usage.tsv
+test -s tests/out_sc_compare/apaura_site_usage.tsv
 
 grep -q 'OBSERVED_' tests/out_sc_compare/all_results.tsv
 grep -q 'apa_architecture' tests/out_sc_compare/all_results.with_architecture.tsv
+grep -q $'\tapd\tusage_jsd\t' tests/out_sc_compare/apaura_usage.tsv
+grep -q $'\tcontrol_pau\ttreated_pau\tdelta_pau' tests/out_sc_compare/apaura_site_usage.tsv
+grep -P -q '^ALL\tGENE1\tGENE1\tchr1\t\+\t2\tUNREPLICATED_OBSERVED_SHIFT\t1\t1\t35\t35\t0\.142857\t0\.857143\t0\.714286\t0\.714286\t.*\tyes\tno\tno\tstable\tlengthening\tstable\tobserved_lengthening\tdescriptive_only\t' tests/out_sc_compare/apaura_usage.tsv
+grep -P -q '^ALL\tGENE2\tGENE2\tchr2\t-\t2\tUNREPLICATED_OBSERVED_SHIFT\t1\t1\t35\t35\t0\.857143\t0\.142857\t-0\.714286\t0\.714286\t.*\tyes\tno\tno\tstable\tshortening\tstable\tobserved_shortening\tdescriptive_only\t' tests/out_sc_compare/apaura_usage.tsv
 
 # RBP motif-enrichment regression test
 python3 tests/make_rbp_synthetic.py

@@ -9,13 +9,13 @@ package org.apaura.analysis;
  * position index (WPI) summarizes where that change moved along transcript
  * orientation.</p>
  */
-final class ApaUsageMetrics {
+public final class ApaUsageMetrics {
 
     private ApaUsageMetrics() {
         // Utility class.
     }
 
-    static double weightedPositionIndex(
+    public static double weightedPositionIndex(
             double[] usage,
             double[] normalizedPositions
     ) {
@@ -37,7 +37,7 @@ final class ApaUsageMetrics {
         return weighted;
     }
 
-    static double totalVariationDistance(double[] left, double[] right) {
+    public static double totalVariationDistance(double[] left, double[] right) {
         requireSameLength(left, right);
         if (left.length == 0) {
             return Double.NaN;
@@ -57,7 +57,7 @@ final class ApaUsageMetrics {
     }
 
     /** Jensen-Shannon divergence in bits, bounded to [0, 1]. */
-    static double jensenShannonDivergence(double[] left, double[] right) {
+    public static double jensenShannonDivergence(double[] left, double[] right) {
         requireSameLength(left, right);
         if (left.length == 0) {
             return Double.NaN;
@@ -83,7 +83,7 @@ final class ApaUsageMetrics {
         return Math.max(0.0, Math.min(1.0, divergence));
     }
 
-    static String observedDirection(double deltaWpi, double threshold) {
+    public static String observedDirection(double deltaWpi, double threshold) {
         if (!Double.isFinite(deltaWpi)) {
             return "not_applicable";
         }
@@ -96,7 +96,7 @@ final class ApaUsageMetrics {
         return "no_directional_shift";
     }
 
-    static String supportedDirection(
+    public static String supportedDirection(
             boolean changed,
             double deltaWpi,
             double threshold

@@ -105,6 +105,7 @@ public final class Sc3utrCommand {
     public static void runCompare(String[] args) throws Exception {
         runCore(args);
         annotateResults(args);
+        ScApaUsageHarmonizer.run(args);
     }
 
     private static void annotateResults(String[] args) throws Exception {
