@@ -1,5 +1,0 @@
-sample	condition	bam
-C1	control	control1.sam
-C2	control	control2.sam
-T1	treated	treated1.sam
-T2	treated	treated2.sam
