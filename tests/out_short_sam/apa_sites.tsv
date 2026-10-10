@@ -1,3 +1,0 @@
-group_id	gene_id	gene_name	chrom	strand	site_id	pas_position_1based	site_rank	control_pau	case_pau	delta_pau	pvalue	fdr	status
-GAPA1|TE001	GAPA1	ApaDemo	chr1	+	GAPA1|TE001|PAS1	200	1	0.26500000	0.73500000	0.47000000	6.587379369e-05	6.587379369e-05	ok
-GAPA1|TE001	GAPA1	ApaDemo	chr1	+	GAPA1|TE001|PAS2	300	2	0.73500000	0.26500000	-0.47000000	6.587379369e-05	6.587379369e-05	ok

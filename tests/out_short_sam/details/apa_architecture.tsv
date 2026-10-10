@@ -1,2 +1,0 @@
-gene_id	gene_name	biotype	chrom	gene_start_1based	gene_end_1based	strand	annotation_architecture	components	n_transcripts	n_terminal_branches	n_annotated_pas	n_terminal_pas	n_tutr_branches	n_ipa_compatible_ends
-GAPA1	ApaDemo	protein_coding	chr1	101	300	+	TUTR	TUTR	2	1	2	2	1	0

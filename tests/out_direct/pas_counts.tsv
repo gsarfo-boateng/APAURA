@@ -1,3 +1,0 @@
-site_id	chrom	pos0	strand	gene_id	gene_name	region	C1	C2	T1	T2
-PAS0000001	chr1	699	+	GENE1	GENE1	terminal_exon_noncoding	8	10	32	30
-PAS0000002	chr1	899	+	GENE1	GENE1	terminal_exon_noncoding	32	30	8	10
