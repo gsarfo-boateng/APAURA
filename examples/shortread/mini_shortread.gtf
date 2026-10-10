@@ -1,0 +1,4 @@
+chr1	test	exon	101	200	.	+	.	gene_id "GAPA1"; transcript_id "GAPA1_short"; gene_name "ApaDemo"; gene_type "protein_coding"; transcript_type "protein_coding";
+chr1	test	CDS	101	120	.	+	0	gene_id "GAPA1"; transcript_id "GAPA1_short"; gene_name "ApaDemo"; gene_type "protein_coding"; transcript_type "protein_coding";
+chr1	test	exon	101	300	.	+	.	gene_id "GAPA1"; transcript_id "GAPA1_long"; gene_name "ApaDemo"; gene_type "protein_coding"; transcript_type "protein_coding";
+chr1	test	CDS	101	120	.	+	0	gene_id "GAPA1"; transcript_id "GAPA1_long"; gene_name "ApaDemo"; gene_type "protein_coding"; transcript_type "protein_coding";
