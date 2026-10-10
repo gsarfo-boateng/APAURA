@@ -3,8 +3,13 @@ message: "If you use APAURA, please cite this software."
 title: "APAURA: Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis"
 type: software
 authors:
-  - family-names: "Boateng-Sarfo"
-    given-names: "George"
+  authors:
+    - family-names: "Boateng-Sarfo"
+      given-names: "George"
+    - family-names: "Sigor"
+      given-names: "Sarah"
+    - family-names: "Wang"
+      given-names: "Lili"
 version: "0.10.1"
 date-released: "2026-10-06"
 license: "MIT"
