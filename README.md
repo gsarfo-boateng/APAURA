@@ -114,10 +114,11 @@ The portable build creates:
 ```text
 APAURA.jar
 ```
+
 ### Download compiled jar file
 
 ```bash
-tar -xf archive.tar.gz
+tar -xf APAURA-compiled_jar_file.tar.gz
 ```
 
 Check the version:
