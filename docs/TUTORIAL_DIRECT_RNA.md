@@ -1,6 +1,6 @@
-# Tutorial: direct RNA / true 3′-end evidence
+# Tutorial: direct RNA / true 3'-end evidence
 
-Use `run-direct` when the transcript-oriented aligned 3′ end is biologically meaningful, including Nanopore direct RNA and appropriate 3′-end-enriched assays.
+Use `run-direct` when the transcript-oriented aligned 3' end is biologically meaningful, including Nanopore direct RNA and appropriate 3'-end-enriched assays.
 
 ## Sample sheet
 

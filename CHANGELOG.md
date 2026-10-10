@@ -2,6 +2,13 @@
 
 ## [0.10.1] - 2026-10-06
 
+- Added `SINGLE_PAS` and `UNRESOLVED` terminal-architecture states and reconciled terminal exon groups for long-read architecture assignment.
+- Harmonized PAU, WPI, TVD/APD, and Jensen-Shannon usage summaries across bulk modalities and the integrated single-cell workflow.
+- Restricted Fisher exact testing to genuine experimental 1-vs-1 designs; sparse replicated designs remain `not_tested` with `insufficient_replicate_support`.
+- Enforced mechanism-specific significance support for TUTR, ALE, IPA, and internal-exon changes.
+- Added real-data acceptance validation across short-read RNA-seq, IsoQuant, ONT direct RNA, and a PacBio statistical stress test, while retaining the existing single-cell cross-tool benchmark.
+
+
 ### Added
 
 - Annotation-guided conventional short-read TUTR, ALE, mixed, and IPA analysis.
@@ -34,7 +41,7 @@
 - Reworked README and tutorials.
 - Added validation and release checklists.
 
-## 0.10.1 — 2026
+## 0.10.1 - 2026
 
 ### Short-read APA
 

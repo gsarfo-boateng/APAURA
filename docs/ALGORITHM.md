@@ -16,9 +16,9 @@ APAURA loads transcript models from the GTF and organizes terminal structures in
 
 Conventional fragmented RNA-seq does not provide direct cleavage evidence. APAURA therefore uses CIGAR-aware coverage/evidence across annotated terminal structures and annotated PAS groups rather than interpreting ordinary aligned read ends as cleavage sites.
 
-## Direct/true 3′-end evidence
+## Direct/true 3'-end evidence
 
-When transcript-oriented aligned 3′ ends are biologically meaningful, endpoint evidence can be extracted directly and nearby sites can be clustered.
+When transcript-oriented aligned 3' ends are biologically meaningful, endpoint evidence can be extracted directly and nearby sites can be clustered.
 
 ## PAU
 

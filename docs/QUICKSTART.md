@@ -12,7 +12,7 @@ java -jar APAURA.jar short-read \
   --out results
 ```
 
-## Direct RNA / true 3′-end
+## Direct RNA / true 3'-end
 
 ```bash
 java -jar APAURA.jar run-direct \

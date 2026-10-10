@@ -86,7 +86,7 @@ Standalone region plotting currently uses the supplied GTF for annotation/termin
 
 ## Strand orientation
 
-The genomic x-axis remains left-to-right. For a minus-strand gene, transcript 3′ direction points left. Use `--genomic-orientation` when genomic rather than transcript-oriented coverage display is preferred.
+The genomic x-axis remains left-to-right. For a minus-strand gene, transcript 3' direction points left. Use `--genomic-orientation` when genomic rather than transcript-oriented coverage display is preferred.
 
 ## Coverage options
 

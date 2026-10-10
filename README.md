@@ -6,7 +6,7 @@
 [![Java](https://img.shields.io/badge/Java-8%2B-orange.svg)](#installation)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-APAURA is a Java toolkit for detecting, quantifying, classifying, and visualizing alternative polyadenylation (APA) from RNA-sequencing data. It supports true 3′-end/direct-RNA evidence, IsoQuant corrected reads, conventional short-read RNA-seq, single-cell APA analysis, RNA-binding-protein motif enrichment, and publication-style locus visualization.
+APAURA is a Java toolkit for detecting, quantifying, classifying, and visualizing alternative polyadenylation (APA) from RNA-sequencing data. It supports true 3'-end/direct-RNA evidence, IsoQuant corrected reads, conventional short-read RNA-seq, single-cell APA analysis, RNA-binding-protein motif enrichment, and publication-style locus visualization.
 
 **Version:** `0.10.1`
 
@@ -32,18 +32,19 @@ mechanism-specific differential APA
 candidate RBP regulators
 ```
 
-APAURA separates **terminal APA architecture** from **the mechanism that changes between conditions**. This allows tandem 3′ UTR APA (TUTR), alternative last exon usage (ALE), and intronic polyadenylation (IPA) to be represented without collapsing distinct biological processes into one proximal/distal score.
+APAURA separates **terminal APA architecture** from **the mechanism that changes between conditions**. This allows tandem 3' UTR APA (TUTR), alternative last exon usage (ALE), and intronic polyadenylation (IPA) to be represented without collapsing distinct biological processes into one proximal/distal score.
 
 ### Terminal APA architecture
 
 | Architecture | Interpretation |
 |---|---|
-| `TUTR` | At least one terminal-exon branch contains multiple PAS |
-| `ALE` | Multiple alternative terminal-exon branches are present |
-| `mixed` | Both TUTR and ALE architecture are present |
-| `none` | No retained TUTR/ALE terminal architecture is identified |
+| `SINGLE_PAS` | One resolved terminal exon group with one retained terminal PAS |
+| `TUTR` | One resolved terminal exon group with multiple retained PAS |
+| `ALE` | Multiple resolved terminal exon groups, without tandem PAS within a group |
+| `mixed` | Multiple resolved terminal exon groups with tandem PAS in at least one group |
+| `UNRESOLVED` | Retained terminal PAS cannot be assigned completely to reconciled terminal structure |
 
-**IPA is not an `apa_architecture` value.** Intronic polyadenylation is quantified as a separate termination mechanism and can co-occur with TUTR or ALE.
+**IPA is not an `apa_architecture` value.** Intronic polyadenylation is quantified as a separate termination mechanism. A gene can therefore have local IPA evidence independently of its terminal architecture, including when its overall terminal architecture is `UNRESOLVED`.
 
 ### Direction of change
 
@@ -62,7 +63,7 @@ Mechanism-specific columns such as `tutr_direction`, `ale_direction`, and `ipa_d
 
 | Task | Input | APAURA command |
 |---|---|---|
-| True 3′-end / direct RNA APA | BAM/SAM + GTF | `run-direct` |
+| True 3'-end / direct RNA APA | BAM/SAM + GTF | `run-direct` |
 | IsoQuant long-read APA | IsoQuant corrected reads + GTF | `run-isoquant` |
 | Conventional RNA-seq APA | BAM/SAM + GTF | `short-read` |
 | Single-cell APA | Single-cell alignments + PAS reference + cell metadata | `sc` |
@@ -89,10 +90,7 @@ For `plot-region` you also need:
 Install plotting dependencies in R:
 
 ```r
-install.packages(c(
-  "ggplot2", "dplyr", "readr", "stringr",
-  "purrr", "tibble", "patchwork"
-))
+install.packages(c("ggplot2", "dplyr", "readr", "stringr", "purrr", "tibble", "patchwork"))
 
 if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
@@ -136,16 +134,10 @@ Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis
 ### Conventional short-read RNA-seq
 
 ```bash
-java -jar APAURA.jar short-read \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --control control \
-  --case treated \
-  --library reverse \
-  --out results
+java -jar APAURA.jar short-read --samples samples.tsv  --gtf annotation.gtf --control control --case treated --library reverse --out results
 ```
 
-Short-read fragment ends are **not** interpreted as cleavage sites. APAURA instead uses transcript-aware annotation, CIGAR-aware coverage, annotated terminal PAS structure, terminal-exon branch usage, and intronic termination evidence to quantify TUTR, ALE, and IPA.
+Short-read fragment ends are **not** interpreted as cleavage sites. APAURA instead uses transcript-aware annotation, CIGAR-aware coverage, annotated terminal PAS structure, terminal exon group usage, and intronic termination evidence to quantify TUTR, ALE, and IPA.
 
 Valid library modes are:
 
@@ -155,15 +147,10 @@ forward
 reverse
 ```
 
-### Direct RNA / true 3′-end evidence
+### Direct RNA / true 3'-end evidence
 
 ```bash
-java -jar APAURA.jar run-direct \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --control control \
-  --case treated \
-  --out results
+java -jar APAURA.jar run-direct --samples samples.tsv --gtf annotation.gtf --control control --case treated --out results
 ```
 
 To preserve exact single-nucleotide cleavage coordinates:
@@ -175,12 +162,7 @@ To preserve exact single-nucleotide cleavage coordinates:
 ### IsoQuant corrected reads
 
 ```bash
-java -jar APAURA.jar run-isoquant \
-  --samples isoquant_samples.tsv \
-  --gtf annotation.gtf \
-  --control control \
-  --case treated \
-  --out results
+java -jar APAURA.jar run-isoquant --samples isoquant_samples.tsv --gtf annotation.gtf --control control --case treated --out results
 ```
 ### Single-cell alternative polyadenylation
 
@@ -244,9 +226,7 @@ With sufficient biological replication, APAURA can perform replicate-supported c
 ### 1. Build a PAS catalog from GTF/GFF annotation
 
 ```bash
-java -jar APAURA.jar sc gtf-sites \
-  --annotation annotation.gtf \
-  --out sites.tsv
+java -jar APAURA.jar sc gtf-sites --annotation annotation.gtf --out sites.tsv
 ```
 
 Nearby annotated transcript ends are clustered into candidate PAS. The default clustering distance is 24 nt and can be changed with:
@@ -276,7 +256,7 @@ MIXED
 UNRESOLVED
 ```
 
-`TUTR` represents multiple PAS within a terminal-exon context, `ALE` represents alternative terminal-exon usage, and `MIXED` indicates that both mechanisms are present.
+`TUTR` represents multiple PAS within a terminal exon group, `ALE` represents alternative terminal-exon usage, and `MIXED` indicates that both mechanisms are present.
 
 ### 2. Import PAS calls from another APA tool
 
@@ -301,7 +281,7 @@ This is useful when PAS evidence comes from several sources, for example:
 ```text
 annotation-derived transcript ends
 +
-3′ end sequencing
+3' end sequencing
 +
 direct RNA sequencing
 +
@@ -317,14 +297,7 @@ Single-cell alignments are assigned to compatible PAS while retaining sample, ce
 Example:
 
 ```bash
-java -jar APAURA.jar sc quantify \
-  --sites sites.tsv \
-  --alignment sample.bam \
-  --sample-id SAMPLE_1 \
-  --gene-tag GX \
-  --three-prime-by gene \
-  --site-window 50 \
-  --out SAMPLE_1.counts.tsv
+java -jar APAURA.jar sc quantify --sites sites.tsv --alignment sample.bam  --sample-id SAMPLE_1 --gene-tag GX --three-prime-by gene --site-window 50 --out SAMPLE_1.counts.tsv
 ```
 
 The basic count representation is:
@@ -342,7 +315,7 @@ SAMPLE_1    CELL001   GENE1_PAS2    3
 SAMPLE_1    CELL002   GENE1_PAS1    2
 ```
 
-Molecules are UMI-deduplicated before PAS counts are written. Barcode, UMI, gene, strand, and transcript-oriented 3′-end information are retained during assignment so that repeated reads from the same molecule do not artificially increase PAS usage.
+Molecules are UMI-deduplicated before PAS counts are written. Barcode, UMI, gene, strand, and transcript-oriented 3'-end information are retained during assignment so that repeated reads from the same molecule do not artificially increase PAS usage.
 
 ### 5. Build grouped reference tables
 
@@ -360,12 +333,7 @@ CELL003    SAMPLE_1     T_cell
 Run:
 
 ```bash
-java -jar APAURA.jar sc reference \
-  --sites sites.tsv \
-  --counts counts.tsv \
-  --cells cells.tsv \
-  --group-by cell_type \
-  --out reference_results
+java -jar APAURA.jar sc reference --sites sites.tsv --counts counts.tsv --cells cells.tsv --group-by cell_type --out reference_results
 ```
 
 Multiple grouping variables can be combined:
@@ -401,27 +369,13 @@ TRT_2        treated
 Run:
 
 ```bash
-java -jar APAURA.jar sc compare \
-  --sites sites.tsv \
-  --samples samples.tsv \
-  --counts counts.tsv \
-  --control control \
-  --treated treated \
-  --out comparison_results
+java -jar APAURA.jar sc compare --sites sites.tsv --samples samples.tsv --counts counts.tsv --control control --treated treated --out comparison_results
 ```
 
 For cell-context-aware comparisons, cell metadata and grouping variables can also be supplied:
 
 ```bash
-java -jar APAURA.jar sc compare \
-  --sites sites.tsv \
-  --samples samples.tsv \
-  --counts counts.tsv \
-  --cells cells.tsv \
-  --group-by cell_type \
-  --control control \
-  --treated treated \
-  --out comparison_results
+java -jar APAURA.jar sc compare --sites sites.tsv --samples samples.tsv --counts counts.tsv --cells cells.tsv --group-by cell_type --control control --treated treated --out comparison_results
 ```
 
 Important comparison options include:
@@ -439,7 +393,7 @@ Important comparison options include:
 
 ### APA remodeling metrics
 
-For each evaluable gene, APAURA reconstructs the PAS-usage distribution and summarizes several complementary properties of 3′-end remodeling.
+For each evaluable gene, APAURA reconstructs the PAS-usage distribution and summarizes several complementary properties of 3'-end remodeling.
 
 ```text
 UTR index
@@ -524,7 +478,7 @@ observed_unreplicated_events.with_architecture.tsv
 
 The architecture layer provides structural context for interpreting a PAS shift. It does **not** represent an additional treatment-response category.
 
-For example, a proximal/distal redistribution may have different biological meaning depending on whether the underlying transcript structure is tandem 3′ UTR (`TUTR`), alternative last exon (`ALE`), or `MIXED`.
+For example, a proximal/distal redistribution may have different biological meaning depending on whether the underlying transcript structure is tandem 3' UTR (`TUTR`), alternative last exon (`ALE`), or `MIXED`.
 
 For command-specific options:
 
@@ -541,12 +495,7 @@ java -jar APAURA.jar sc compare --help
 ### RBP motif enrichment
 
 ```bash
-java -jar APAURA.jar rbp-enrich \
-  --sites results/apa_sites.tsv \
-  --genes results/apa.tsv \
-  --fasta genome.fa \
-  --motifs rbp_motifs.meme \
-  --out rbp_results
+java -jar APAURA.jar rbp-enrich --sites results/apa_sites.tsv --genes results/apa.tsv --fasta genome.fa --motifs rbp_motifs.meme --out rbp_results
 ```
 
 The RBP module tests sequence motifs around regulated PAS and, for ALE events, terminal-exon splice-acceptor windows. Enrichment identifies **candidate regulatory associations**; it is not evidence of direct binding or causality by itself.
@@ -588,24 +537,13 @@ TRT_2	treated	/path/TRT_2_isoquant
 When `--results` is supplied, the plot can combine normalized coverage with tested APA results.
 
 ```bash
-java -jar APAURA.jar plot-region \
-  --results results \
-  --gene HNRNPA2B1 \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --control U1_WT \
-  --case U1_MUT \
-  --library reverse \
-  --show-replicates \
-  --show-overview \
-  --format pdf \
-  --out plots/HNRNPA2B1
+java -jar APAURA.jar plot-region --results results --gene HNRNPA2B1 --samples samples.tsv --gtf annotation.gtf --control U1_WT --case U1_MUT --library reverse --show-replicates --show-overview --format pdf --out plots/HNRNPA2B1
 ```
 
 Depending on the locus and analysis mode, the figure can include:
 
 - whole-gene coverage overview;
-- zoomed 3′ terminal-region coverage;
+- zoomed 3' terminal-region coverage;
 - replicate coverage;
 - tested terminal PAS and ΔPAU;
 - TUTR direction;
@@ -619,17 +557,7 @@ Depending on the locus and analysis mode, the figure can include:
 A completed APAURA result directory is **not required**.
 
 ```bash
-java -jar APAURA.jar plot-region \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --gene HNRNPA2B1 \
-  --control U1_WT \
-  --case U1_MUT \
-  --library reverse \
-  --show-replicates \
-  --show-overview \
-  --format pdf \
-  --out plots/HNRNPA2B1
+java -jar APAURA.jar plot-region --samples samples.tsv --gtf annotation.gtf --gene HNRNPA2B1 --control U1_WT --case U1_MUT --library reverse --show-replicates --show-overview --format pdf --out plots/HNRNPA2B1
 ```
 
 Standalone mode shows:
@@ -646,43 +574,19 @@ Standalone mode **does not perform differential APA testing**. Therefore it does
 ### Multiple genes
 
 ```bash
-java -jar APAURA.jar plot-region \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --gene HNRNPA2B1,PLA2G12A,TMEM254 \
-  --control U1_WT \
-  --case U1_MUT \
-  --library reverse \
-  --show-overview \
-  --format pdf \
-  --out plots
+java -jar APAURA.jar plot-region --samples samples.tsv --gtf annotation.gtf --gene HNRNPA2B1,PLA2G12A,TMEM254 --control U1_WT --case U1_MUT --library reverse --show-overview --format pdf --out plots
 ```
 
 Or:
 
 ```bash
-java -jar APAURA.jar plot-region \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --genes-file genes.txt \
-  --control U1_WT \
-  --case U1_MUT \
-  --library reverse \
-  --out plots
+java -jar APAURA.jar plot-region --samples samples.tsv --gtf annotation.gtf --genes-file genes.txt --control U1_WT --case U1_MUT --library reverse --out plots
 ```
 
 ### Genomic region
 
 ```bash
-java -jar APAURA.jar plot-region \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --region chr7:26170000-26197000 \
-  --control U1_WT \
-  --case U1_MUT \
-  --library reverse \
-  --format pdf \
-  --out plots/chr7_region
+java -jar APAURA.jar plot-region --samples samples.tsv --gtf annotation.gtf --region chr7:26170000-26197000 --control U1_WT --case U1_MUT --library reverse --format pdf --out plots/chr7_region
 ```
 
 See [`docs/TUTORIAL_PLOT_REGION.md`](docs/TUTORIAL_PLOT_REGION.md) for details.
@@ -699,13 +603,13 @@ apa_events.tsv
 apa_sites.tsv
 ```
 
-- `apa.tsv` — gene-level APA summary and mechanism-specific direction
-- `apa_events.tsv` — event-level TUTR/ALE/IPA results
-- `apa_sites.tsv` — PAS/site-level differential results
+- `apa.tsv` - gene-level APA summary and mechanism-specific direction
+- `apa_events.tsv` - event-level TUTR/ALE/IPA results
+- `apa_sites.tsv` - PAS/site-level differential results
 
 Additional diagnostic/intermediate tables may be produced for detailed inspection and validation.
 
-### Direct RNA / true 3′-end and IsoQuant analyses
+### Direct RNA / true 3'-end and IsoQuant analyses
 
 Common outputs include:
 
@@ -776,7 +680,7 @@ ALE and IPA are quantified independently so branch switching and intronic termin
 APAURA uses mechanism-appropriate statistical and effect-size summaries, including:
 
 - beta-binomial likelihood-ratio testing for replicated PAS-usage comparisons;
-- Fisher's exact test for the 1-vs-1 fallback case;
+- Fisher's exact test only for genuine experimental 1-vs-1 designs; replicated designs with inadequate evaluable support remain `not_tested` with `insufficient_replicate_support`;
 - Benjamini-Hochberg FDR correction;
 - weighted positional indices for TUTR and ALE direction;
 - total-variation distance and Jensen-Shannon divergence for distributional shifts;
@@ -804,7 +708,7 @@ bash tests/run_tests.sh
 APAURA v0.10.1 includes synthetic regression coverage for:
 
 - SAM and BAM reading;
-- true 3′-end/direct-RNA analysis;
+- true 3'-end/direct-RNA analysis;
 - IsoQuant input;
 - short-read TUTR;
 - ALE;
