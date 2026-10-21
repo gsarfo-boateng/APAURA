@@ -1,0 +1,87 @@
+name: Build Linux Native
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/unified-apa-usage
+    paths:
+      - ".github/workflows/build-linux-native.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  linux-native:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout APAURA v0.10.1
+        uses: actions/checkout@v6
+        with:
+          ref: v0.10.1
+          fetch-depth: 0
+
+      - name: Set up GraalVM 21
+        uses: graalvm/setup-graalvm@v1
+        with:
+          version: "21"
+          distribution: "graalvm"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: "maven"
+
+      - name: Verify exact source and environment
+        run: |
+          echo "Architecture:"
+          uname -m
+
+          echo "Commit:"
+          git rev-parse HEAD
+
+          echo "Java:"
+          java -version
+
+          echo "Native Image:"
+          native-image --version
+
+          test "$(git rev-parse HEAD)" = "856fb1d785972cdaaf6e7b4e29cbc486cc1451ea"
+
+      - name: Build APAURA native image
+        run: |
+          mvn -B clean package -Pnative
+
+      - name: Verify Linux executable
+        run: |
+          file target/apaura
+          file target/apaura | grep -q 'ELF 64-bit'
+          file target/apaura | grep -Eq 'x86-64|x86_64'
+
+          ./target/apaura version
+
+          ./target/apaura short-read --help >/dev/null
+          ./target/apaura run-direct --help >/dev/null
+          ./target/apaura run-isoquant --help >/dev/null
+          ./target/apaura sc --help >/dev/null
+          ./target/apaura rbp-enrich --help >/dev/null
+          ./target/apaura plot-region --help >/dev/null
+
+          echo "All native CLI smoke tests passed."
+
+      - name: Prepare Linux release artifact
+        run: |
+          cp target/apaura apaura-v0.10.1-linux-x86_64
+          chmod +x apaura-v0.10.1-linux-x86_64
+
+          sha256sum apaura-v0.10.1-linux-x86_64 \
+            > apaura-v0.10.1-linux-x86_64.sha256
+
+          cat apaura-v0.10.1-linux-x86_64.sha256
+
+      - name: Upload Linux release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apaura-v0.10.1-linux-x86_64
+          path: |
+            apaura-v0.10.1-linux-x86_64
+            apaura-v0.10.1-linux-x86_64.sha256
+          retention-days: 7
