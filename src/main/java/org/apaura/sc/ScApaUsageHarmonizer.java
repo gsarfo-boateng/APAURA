@@ -250,6 +250,8 @@ final class ScApaUsageHarmonizer {
             }
         }
 
+        ScCanonicalOutputAdapter.write(outDir, args);
+
         System.out.printf(
                 Locale.ROOT,
                 "APAURA single-cell usage harmonization complete.%n"

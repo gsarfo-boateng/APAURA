@@ -29,13 +29,13 @@ jar tf APAURA.jar | grep 'org/apaura/analysis/ShortReadDifferential.class'
 ## CLI
 
 ```bash
-java -jar APAURA.jar --version
-java -jar APAURA.jar --help
-java -jar APAURA.jar short-read --help
-java -jar APAURA.jar run-direct --help
-java -jar APAURA.jar run-isoquant --help
-java -jar APAURA.jar plot-region --help
-java -jar APAURA.jar rbp-enrich --help
+apaura --version
+apaura --help
+apaura short-read --help
+apaura run-direct --help
+apaura run-isoquant --help
+apaura plot-region --help
+apaura rbp-enrich --help
 ```
 
 - [ ] Help matches actual behavior.

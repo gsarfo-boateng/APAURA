@@ -45,6 +45,9 @@ gtf_file <- getv("gtf")
 control <- getv("control")
 case <- getv("case")
 gene <- getv("gene")
+# BEGIN APAURA_SC_GROUP_ARGUMENT
+group_filter <- getv("group", "")
+# END APAURA_SC_GROUP_ARGUMENT
 region_arg <- getv("region")
 out <- getv("out","APAURA_region")
 
@@ -193,11 +196,478 @@ empty_panel <- function(title){
 # APA sites
 # ============================================================
 
-apa_file <- file.path(results_dir,"apa_sites.tsv")
+apa_file <- file.path(
+  results_dir,
+  "apa_sites.tsv"
+)
+
+# BEGIN APAURA_SC_SITE_FILE
+sc_site_file <- file.path(
+  results_dir,
+  "apaura_site_usage.tsv"
+)
+
+sc_plot_region <- (
+  !file.exists(apa_file)
+  && file.exists(sc_site_file)
+)
+
+if (sc_plot_region) {
+  apa_file <- sc_site_file
+}
+# END APAURA_SC_SITE_FILE
 if(!file.exists(apa_file)) stop("Missing: ",apa_file)
 
 apa <- read_tab(apa_file)
 
+
+# BEGIN APAURA_SC_SITE_ADAPTER
+
+# SC event-level metadata.
+#
+# IMPORTANT:
+# apaura_site_usage.tsv contains PAS usage/effect information.
+# Its PAS rows do NOT currently provide a site-specific inferential FDR.
+#
+# For replicated SC analyses, statistical support therefore refers
+# to the gene-level/event-level APA test, not to each individual PAS.
+sc_event_architecture <- NA_character_
+sc_event_classification <- NA_character_
+sc_event_effect <- NA_real_
+sc_event_q <- NA_real_
+sc_analysis_mode <- NA_character_
+
+sc_n_control <- NA_integer_
+sc_n_case <- NA_integer_
+
+sc_unreplicated <- FALSE
+sc_event_supported <- FALSE
+
+if (sc_plot_region) {
+
+  required_sc_columns <- c(
+    "group",
+    "gene_id",
+    "gene_symbol",
+    "chrom",
+    "strand",
+    "site_id",
+    "position",
+    "control_pau",
+    "treated_pau",
+    "delta_pau"
+  )
+
+  missing_sc_columns <- setdiff(
+    required_sc_columns,
+    names(apa)
+  )
+
+  if (length(missing_sc_columns) > 0) {
+
+    stop(
+      paste0(
+        "apaura_site_usage.tsv is missing required columns: ",
+        paste(
+          missing_sc_columns,
+          collapse = ", "
+        )
+      )
+    )
+  }
+
+
+  # ----------------------------------------------------------
+  # Exact group selection
+  # ----------------------------------------------------------
+
+  available_groups <- unique(
+    as.character(
+      apa$group
+    )
+  )
+
+  available_groups <- available_groups[
+    !is.na(available_groups)
+    & nzchar(available_groups)
+  ]
+
+  if (nzchar(group_filter)) {
+
+    apa <- apa[
+      as.character(apa$group) == group_filter,
+      ,
+      drop = FALSE
+    ]
+
+    if (nrow(apa) == 0) {
+
+      stop(
+        paste0(
+          "No rows in apaura_site_usage.tsv for --group ",
+          group_filter
+        )
+      )
+    }
+
+  } else if (length(available_groups) > 1) {
+
+    stop(
+      paste0(
+        "Single-cell APA results contain multiple groups. ",
+        "Supply --group. Available groups: ",
+        paste(
+          available_groups,
+          collapse = ", "
+        )
+      )
+    )
+  }
+
+
+  # ----------------------------------------------------------
+  # Canonical APAURA plotting columns
+  # ----------------------------------------------------------
+
+  apa$gene_name <- as.character(
+    apa$gene_symbol
+  )
+
+  apa$pas_position_1based <- suppressWarnings(
+    as.integer(
+      apa$position
+    )
+  )
+
+  apa$control_pau <- suppressWarnings(
+    as.numeric(
+      apa$control_pau
+    )
+  )
+
+  apa$case_pau <- suppressWarnings(
+    as.numeric(
+      apa$treated_pau
+    )
+  )
+
+  apa$delta_pau <- suppressWarnings(
+    as.numeric(
+      apa$delta_pau
+    )
+  )
+
+
+  # ----------------------------------------------------------
+  # Biological-replicate counts from site table
+  # ----------------------------------------------------------
+
+  first_finite_int <- function(x) {
+
+    z <- suppressWarnings(
+      as.integer(x)
+    )
+
+    z <- z[
+      is.finite(z)
+    ]
+
+    if (!length(z))
+      return(NA_integer_)
+
+    z[1]
+  }
+
+  if ("n_control_samples" %in% names(apa)) {
+
+    sc_n_control <- first_finite_int(
+      apa$n_control_samples
+    )
+  }
+
+  if ("n_treated_samples" %in% names(apa)) {
+
+    sc_n_case <- first_finite_int(
+      apa$n_treated_samples
+    )
+  }
+
+
+  # ----------------------------------------------------------
+  # Read gene-level/event-level SC result
+  # ----------------------------------------------------------
+
+  sc_event_candidates <- c(
+    file.path(
+      results_dir,
+      "all_results.with_architecture.tsv"
+    ),
+    file.path(
+      results_dir,
+      "unified_results.with_architecture.tsv"
+    ),
+    file.path(
+      results_dir,
+      "observed_unreplicated_events.with_architecture.tsv"
+    )
+  )
+
+  sc_event_candidates <- sc_event_candidates[
+    file.exists(sc_event_candidates)
+  ]
+
+  if (length(sc_event_candidates)) {
+
+    sc_event_file <- sc_event_candidates[1]
+
+    sc_event <- read_tab(
+      sc_event_file
+    )
+
+    if (
+      "group" %in% names(sc_event)
+      && nzchar(group_filter)
+    ) {
+
+      sc_event <- sc_event[
+        as.character(sc_event$group)
+        == group_filter,
+        ,
+        drop = FALSE
+      ]
+    }
+
+
+    # Support either gene_symbol or gene_name.
+    if (!"gene_symbol" %in% names(sc_event)) {
+
+      if ("gene_name" %in% names(sc_event)) {
+
+        sc_event$gene_symbol <- as.character(
+          sc_event$gene_name
+        )
+
+      } else {
+
+        sc_event$gene_symbol <- ""
+      }
+    }
+
+    if (!"gene_id" %in% names(sc_event)) {
+
+      sc_event$gene_id <- ""
+    }
+
+
+    if (!empty(gene)) {
+
+      sc_event <- sc_event %>%
+        filter(
+          gene_symbol == gene
+          | clean_ens(gene_id)
+            == clean_ens(gene)
+        )
+    }
+
+
+    if (nrow(sc_event)) {
+
+      ev <- sc_event[1, , drop = FALSE]
+
+
+      if ("apa_architecture" %in% names(ev)) {
+
+        sc_event_architecture <- toupper(
+          as.character(
+            ev$apa_architecture[1]
+          )
+        )
+      }
+
+
+      if ("classification" %in% names(ev)) {
+
+        sc_event_classification <- as.character(
+          ev$classification[1]
+        )
+      }
+
+
+      effect_col <- c(
+        "delta_utr_index",
+        "delta_tutr_wpi",
+        "delta_wpi",
+        "delta_dui"
+      )
+
+      effect_col <- effect_col[
+        effect_col %in% names(ev)
+      ]
+
+      if (length(effect_col)) {
+
+        sc_event_effect <- suppressWarnings(
+          as.numeric(
+            ev[[effect_col[1]]][1]
+          )
+        )
+      }
+
+
+      if ("qvalue" %in% names(ev)) {
+
+        sc_event_q <- suppressWarnings(
+          as.numeric(
+            ev$qvalue[1]
+          )
+        )
+      }
+
+
+      if ("analysis_mode" %in% names(ev)) {
+
+        sc_analysis_mode <- as.character(
+          ev$analysis_mode[1]
+        )
+      }
+
+
+      if ("n_control_samples" %in% names(ev)) {
+
+        z <- suppressWarnings(
+          as.integer(
+            ev$n_control_samples[1]
+          )
+        )
+
+        if (is.finite(z))
+          sc_n_control <- z
+      }
+
+
+      if ("n_treated_samples" %in% names(ev)) {
+
+        z <- suppressWarnings(
+          as.integer(
+            ev$n_treated_samples[1]
+          )
+        )
+
+        if (is.finite(z))
+          sc_n_case <- z
+      }
+    }
+  }
+
+
+  # ----------------------------------------------------------
+  # Determine replication state
+  #
+  # Cells are never treated as biological replicates.
+  # These counts refer to biological samples/pseudobulks.
+  # ----------------------------------------------------------
+
+  sc_unreplicated <- (
+    is.na(sc_n_control)
+    || is.na(sc_n_case)
+    || sc_n_control < 2
+    || sc_n_case < 2
+    || (
+      !is.na(sc_analysis_mode)
+      && grepl(
+        "UNREPLICATED",
+        sc_analysis_mode,
+        ignore.case = TRUE
+      )
+    )
+  )
+
+
+  # ----------------------------------------------------------
+  # Event-level statistical support
+  #
+  # Only valid when biological replication exists.
+  # This is NOT a per-PAS FDR.
+  # ----------------------------------------------------------
+
+  sc_event_supported <- (
+    !sc_unreplicated
+    && is.finite(sc_event_q)
+    && sc_event_q <= fdr_cut
+    && (
+      !is.finite(sc_event_effect)
+      || abs(sc_event_effect) >= apa_effect
+    )
+  )
+
+
+  # PAS rows themselves do not currently carry a site-specific FDR.
+  # Keep the canonical site FDR explicitly NA.
+  apa$fdr <- NA_real_
+
+  if (sc_unreplicated) {
+
+    apa$status <- "observed_unreplicated"
+
+  } else {
+
+    apa$status <- "replicated_sc"
+  }
+
+
+  message(
+    "[APAURA plot] single-cell result group: ",
+    ifelse(
+      nzchar(group_filter),
+      group_filter,
+      available_groups[1]
+    )
+  )
+
+  message(
+    "[APAURA plot] single-cell replication: control=",
+    sc_n_control,
+    " case=",
+    sc_n_case,
+    " mode=",
+    ifelse(
+      sc_unreplicated,
+      "unreplicated descriptive",
+      "replicated inferential"
+    )
+  )
+
+  if (!is.na(sc_event_architecture)) {
+
+    message(
+      "[APAURA plot] single-cell event: architecture=",
+      sc_event_architecture,
+      " classification=",
+      sc_event_classification,
+      " deltaUTR=",
+      signif(
+        sc_event_effect,
+        4
+      ),
+      if (
+        sc_unreplicated
+        || !is.finite(sc_event_q)
+      ) {
+        ""
+      } else {
+        paste0(
+          " event_q=",
+          signif(
+            sc_event_q,
+            4
+          )
+        )
+      }
+    )
+  }
+}
+
+# END APAURA_SC_SITE_ADAPTER
 if(!"pas_position_1based" %in% names(apa)){
   pc <- pick_col(apa,c("position_1based","pas_position","position","pos1"),FALSE)
 
@@ -241,8 +711,71 @@ if(!empty(gene)){
 }
 
 apa <- apa %>%
-  mutate(significant=status=="ok" & !is.na(fdr) & fdr<=fdr_cut & abs(delta_pau)>=apa_effect,
-    direction=case_when(delta_pau>0 ~ "Higher PAU in case", delta_pau<0 ~ "Lower PAU in case", TRUE ~ "No change"))
+  mutate(
+    direction=case_when(
+      delta_pau > 0 ~ "Higher PAU in case",
+      delta_pau < 0 ~ "Lower PAU in case",
+      TRUE ~ "No change"
+    )
+  )
+
+if (sc_plot_region) {
+
+  # SC PAS rows do not have a per-site inferential FDR.
+  #
+  # Unreplicated:
+  #   show all observed PAS changes at full opacity.
+  #
+  # Replicated:
+  #   opacity reflects gene/event-level FDR support.
+  #   It must not be interpreted as PAS-specific significance.
+  apa$significant <- if (
+    sc_unreplicated
+  ) {
+    TRUE
+  } else {
+    sc_event_supported
+  }
+
+} else {
+
+  # Preserve existing bulk/non-SC behavior exactly.
+  apa <- apa %>%
+    mutate(
+      significant=
+        status=="ok"
+        & !is.na(fdr)
+        & fdr<=fdr_cut
+        & abs(delta_pau)>=apa_effect
+    )
+}
+
+if (
+  sc_plot_region
+  && "site_id" %in% names(apa)
+) {
+
+  sid <- as.character(
+    apa$site_id
+  )
+
+  apa$site_label <- ifelse(
+    grepl(
+      "_PAS[0-9]+$",
+      sid
+    ),
+    sub(
+      "^.*_(PAS[0-9]+)$",
+      "\\1",
+      sid
+    ),
+    sid
+  )
+
+} else {
+
+  apa$site_label <- ""
+}
 
 message("[APAURA plot] terminal PAS in region: ",nrow(apa))
 
@@ -914,43 +1447,323 @@ if(mode=="short-read"){
 
 summary_architecture <- NA_character_
 summary_tutr_call <- "not significant"
-if(!empty(gene)){
-  summary_file0 <- result_file("apa.tsv")
-  if(file.exists(summary_file0)){
-    summary0 <- read_tab(summary_file0)
-    if(!"gene_id" %in% names(summary0)) summary0$gene_id <- ""
-    if(!"gene_name" %in% names(summary0)) summary0$gene_name <- ""
+
+apa_panel_title <- "Terminal poly(A) site usage"
+apa_panel_subtitle <- paste0(
+  "ΔPAU = ",
+  case,
+  " − ",
+  control
+)
+
+if (sc_plot_region) {
+
+  if (!is.na(sc_event_architecture)) {
+
+    summary_architecture <-
+      sc_event_architecture
+  }
+
+
+  cls <- toupper(
+    ifelse(
+      is.na(sc_event_classification),
+      "",
+      sc_event_classification
+    )
+  )
+
+  sc_direction_label <- case_when(
+    grepl("LENGTHEN", cls) ~ "lengthening",
+    grepl("SHORTEN", cls) ~ "shortening",
+    grepl("COMPLEX", cls) ~ "complex remodeling",
+    TRUE ~ "remodeling"
+  )
+
+
+  arch_label <- ifelse(
+    is.na(summary_architecture)
+    || !nzchar(summary_architecture),
+    "APA",
+    summary_architecture
+  )
+
+
+  if (sc_unreplicated) {
+
+    apa_panel_title <- paste0(
+      "Terminal poly(A) site usage — ",
+      arch_label,
+      " • observed ",
+      sc_direction_label
+    )
+
+  } else {
+
+    support_label <- if (
+      sc_event_supported
+    ) {
+      "FDR-supported "
+    } else {
+      "not FDR-supported "
+    }
+
+    apa_panel_title <- paste0(
+      "Terminal poly(A) site usage — ",
+      arch_label,
+      " • ",
+      support_label,
+      sc_direction_label
+    )
+  }
+
+
+  effect_label <- if (
+    is.finite(sc_event_effect)
+  ) {
+    sprintf(
+      "ΔUTR index = %+.3f",
+      sc_event_effect
+    )
+  } else {
+    "ΔUTR index = NA"
+  }
+
+
+  max_dpau <- suppressWarnings(
+    max(
+      abs(apa$delta_pau),
+      na.rm = TRUE
+    )
+  )
+
+  dpau_label <- if (
+    is.finite(max_dpau)
+  ) {
+    sprintf(
+      "max |ΔPAU| = %.3f",
+      max_dpau
+    )
+  } else {
+    "max |ΔPAU| = NA"
+  }
+
+
+  group_label <- if (
+    nzchar(group_filter)
+  ) {
+    group_filter
+  } else {
+    "single-cell group"
+  }
+
+
+  if (sc_unreplicated) {
+
+    apa_panel_subtitle <- paste0(
+      effect_label,
+      " • ",
+      dpau_label,
+      " • ΔPAU = ",
+      case,
+      " − ",
+      control,
+      "
+",
+      group_label,
+      " • unreplicated descriptive comparison"
+    )
+
+  } else {
+
+    q_label <- if (
+      is.finite(sc_event_q)
+    ) {
+      format(
+        sc_event_q,
+        digits = 3,
+        scientific = TRUE
+      )
+    } else {
+      "NA"
+    }
+
+    apa_panel_subtitle <- paste0(
+      effect_label,
+      " • event q = ",
+      q_label,
+      " • ",
+      dpau_label,
+      "
+",
+      group_label,
+      " • n=",
+      sc_n_control,
+      " vs ",
+      sc_n_case,
+      " biological samples • ΔPAU = ",
+      case,
+      " − ",
+      control
+    )
+  }
+
+} else if (!empty(gene)) {
+
+  # Existing bulk/non-SC summary behavior.
+  summary_file0 <- result_file(
+    "apa.tsv"
+  )
+
+  if (file.exists(summary_file0)) {
+
+    summary0 <- read_tab(
+      summary_file0
+    )
+
+    if (!"gene_id" %in% names(summary0))
+      summary0$gene_id <- ""
+
+    if (!"gene_name" %in% names(summary0))
+      summary0$gene_name <- ""
+
     summary0 <- summary0 %>%
-      filter(gene_name==gene | clean_ens(gene_id)==clean_ens(gene))
-    if(nrow(summary0) && "apa_architecture" %in% names(summary0))
-      summary_architecture <- as.character(summary0$apa_architecture[1])
-    if(nrow(summary0) && all(c("tutr_change","tutr_direction") %in% names(summary0))){
-      if(as.character(summary0$tutr_change[1])=="yes"){
-        summary_tutr_call <- pretty_direction(summary0$tutr_direction[1])
-      } else if(!is.na(summary_architecture) && !summary_architecture %in% c("TUTR","mixed")){
+      filter(
+        gene_name == gene
+        | clean_ens(gene_id)
+          == clean_ens(gene)
+      )
+
+    if (
+      nrow(summary0)
+      && "apa_architecture" %in% names(summary0)
+    ) {
+
+      summary_architecture <- as.character(
+        summary0$apa_architecture[1]
+      )
+    }
+
+    if (
+      nrow(summary0)
+      && all(
+        c(
+          "tutr_change",
+          "tutr_direction"
+        ) %in% names(summary0)
+      )
+    ) {
+
+      if (
+        as.character(
+          summary0$tutr_change[1]
+        ) == "yes"
+      ) {
+
+        summary_tutr_call <- pretty_direction(
+          summary0$tutr_direction[1]
+        )
+
+      } else if (
+        !is.na(summary_architecture)
+        && !summary_architecture
+           %in% c(
+             "TUTR",
+             "mixed"
+           )
+      ) {
+
         summary_tutr_call <- "not applicable"
       }
     }
   }
-}
 
+  apa_panel_title <- paste0(
+    "Terminal poly(A) site usage — TUTR: ",
+    summary_tutr_call
+  )
+}
 if(nrow(apa)){
 
-  p_apa <- ggplot(apa,aes(pas_position_1based,delta_pau))+
-    geom_hline(yintercept=0,linewidth=.35,colour="grey25")+
-    geom_hline(yintercept=c(-apa_effect,apa_effect), linetype=3, linewidth=.3, colour="grey70")+
-    geom_segment(aes(xend=pas_position_1based, y=0, yend=delta_pau, colour=direction, alpha=significant), linewidth=.7)+
-    geom_point(aes(colour=direction,alpha=significant), size=3)+
-    scale_colour_manual(values=EVENT_COL)+
-    scale_alpha_manual(values=c(`FALSE`=.42,`TRUE`=1), guide="none")+
+  p_apa <- ggplot(
+    apa,
+    aes(
+      pas_position_1based,
+      delta_pau
+    )
+  )+
+    geom_hline(
+      yintercept=0,
+      linewidth=.35,
+      colour="grey25"
+    )+
+    geom_hline(
+      yintercept=c(
+        -apa_effect,
+        apa_effect
+      ),
+      linetype=3,
+      linewidth=.3,
+      colour="grey70"
+    )+
+    geom_segment(
+      aes(
+        xend=pas_position_1based,
+        y=0,
+        yend=delta_pau,
+        colour=direction,
+        alpha=significant
+      ),
+      linewidth=.7
+    )+
+    geom_point(
+      aes(
+        colour=direction,
+        alpha=significant
+      ),
+      size=3
+    )+
+    geom_text(
+      aes(
+        label=site_label
+      ),
+      vjust=ifelse(
+        apa$delta_pau >= 0,
+        -0.7,
+        1.5
+      ),
+      size=2.6,
+      check_overlap=TRUE,
+      show.legend=FALSE
+    )+
+    scale_colour_manual(
+      values=EVENT_COL
+    )+
+    scale_alpha_manual(
+      values=c(
+        `FALSE`=.42,
+        `TRUE`=1
+      ),
+      guide="none"
+    )+
     xscale(FALSE)+
-    theme_classic(base_size=10)+
-    theme(legend.position="right",
+    theme_classic(
+      base_size=10
+    )+
+    theme(
+      legend.position="right",
       axis.text.x=element_blank(),
-      axis.ticks.x=element_blank())+
-    labs(x=NULL, y=expression(Delta*"PAU"),
-      colour=NULL, title=if(!empty(gene)) paste0("Terminal poly(A) site usage — TUTR: ",summary_tutr_call) else "Terminal poly(A) site usage",
-      subtitle=paste0("ΔPAU = ",case," − ",control))
+      axis.ticks.x=element_blank()
+    )+
+    labs(
+      x=NULL,
+      y=expression(
+        Delta*"PAU"
+      ),
+      colour=NULL,
+      title=apa_panel_title,
+      subtitle=apa_panel_subtitle
+    )
 
 } else {
   p_apa <- if(identical(summary_architecture,"ALE")){

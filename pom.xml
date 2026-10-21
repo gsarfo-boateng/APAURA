@@ -2,10 +2,13 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
   <modelVersion>4.0.0</modelVersion>
+
   <groupId>org.apaura</groupId>
   <artifactId>apaura</artifactId>
   <version>0.10.1</version>
+
   <name>APAURA</name>
   <description>Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis</description>
 
@@ -14,6 +17,7 @@
     <maven.compiler.target>1.8</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <junit.version>5.11.4</junit.version>
+    <native.maven.plugin.version>1.1.14</native.maven.plugin.version>
   </properties>
 
   <dependencies>
@@ -27,7 +31,9 @@
 
   <build>
     <finalName>APAURA</finalName>
+
     <plugins>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -38,19 +44,57 @@
           <encoding>UTF-8</encoding>
         </configuration>
       </plugin>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.2.5</version>
         <configuration>
           <useModulePath>false</useModulePath>
+          <excludes>
+            <!-- macOS AppleDouble sidecars on external/non-APFS volumes -->
+            <exclude>**/._*.java</exclude>
+            <exclude>%regex[.*[.]_.*Test.*.class]</exclude>
+          </excludes>
         </configuration>
       </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>remove-macos-appledouble</id>
+            <phase>process-test-classes</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <delete includeemptydirs="true" failonerror="false">
+                  <fileset dir="${project.build.outputDirectory}">
+                    <include name="**/._*"/>
+                  </fileset>
+                  <fileset dir="${project.build.testOutputDirectory}">
+                    <include name="**/._*"/>
+                  </fileset>
+                </delete>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <version>3.3.0</version>
         <configuration>
+          <excludes>
+            <!-- Never package macOS AppleDouble metadata -->
+            <exclude>**/._*</exclude>
+          </excludes>
           <archive>
             <manifest>
               <mainClass>org.apaura.APAURA</mainClass>
@@ -58,6 +102,55 @@
           </archive>
         </configuration>
       </plugin>
+
     </plugins>
   </build>
+
+  <profiles>
+
+    <profile>
+      <id>native</id>
+
+      <build>
+        <plugins>
+
+          <plugin>
+            <groupId>org.graalvm.buildtools</groupId>
+            <artifactId>native-maven-plugin</artifactId>
+            <version>${native.maven.plugin.version}</version>
+            <extensions>true</extensions>
+
+            <executions>
+              <execution>
+                <id>build-native</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>compile-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+
+            <configuration>
+              <mainClass>org.apaura.APAURA</mainClass>
+              <imageName>apaura</imageName>
+              <fallback>false</fallback>
+
+              <metadataRepository>
+                <enabled>false</enabled>
+              </metadataRepository>
+
+              <buildArgs>
+                <buildArg>-march=compatibility</buildArg>
+              </buildArgs>
+            </configuration>
+
+          </plugin>
+
+        </plugins>
+      </build>
+
+    </profile>
+
+  </profiles>
+
 </project>

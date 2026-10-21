@@ -488,6 +488,18 @@ public final class PlotRegionCommand {
                         + " target=" + target
         );
 
+        // BEGIN APAURA_SC_PLOT_REGION_GROUP
+        String plotRegionGroup = args.get("group", "");
+
+        if (!isEmpty(plotRegionGroup)) {
+            add(
+                    command,
+                    "--group",
+                    plotRegionGroup
+            );
+        }
+        // END APAURA_SC_PLOT_REGION_GROUP
+
         ProcessBuilder processBuilder =
                 new ProcessBuilder(command);
 
@@ -779,6 +791,34 @@ public final class PlotRegionCommand {
     private static String detectMode(
             File results
     ) throws IOException {
+
+        // BEGIN APAURA_SC_PLOT_REGION_MODE
+        if (
+                new File(
+                        results,
+                        "apaura_site_usage.tsv"
+                ).isFile()
+                        &&
+                (
+                        new File(
+                                results,
+                                "observed_unreplicated_events.with_architecture.tsv"
+                        ).isFile()
+                                ||
+                        new File(
+                                results,
+                                "all_results.with_architecture.tsv"
+                        ).isFile()
+                                ||
+                        new File(
+                                results,
+                                "unified_results.with_architecture.tsv"
+                        ).isFile()
+                )
+        ) {
+            return "short-read";
+        }
+        // END APAURA_SC_PLOT_REGION_MODE
 
         // Compact short-read output. Prefer the public three-file schema,
         // while retaining compatibility with older short-read result layouts.

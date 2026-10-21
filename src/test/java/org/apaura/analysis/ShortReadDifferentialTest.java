@@ -6,6 +6,7 @@ import org.apaura.model.ShortReadGroup;
 import org.apaura.model.ShortReadQuantification;
 import org.apaura.model.ShortReadSite;
 import org.apaura.model.Strand;
+import org.apaura.stats.MultipleTesting;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -78,6 +79,10 @@ class ShortReadDifferentialTest {
         assertEquals("lengthening", summary.observedDirection);
         assertEquals("not_applicable", summary.apaDirection);
         assertFalse(summary.apaChange);
+        assertTrue(Double.isNaN(summary.eventPvalue));
+        assertTrue(Double.isNaN(summary.eventFdr));
+        assertTrue(Double.isNaN(summary.minPvalue));
+        assertTrue(Double.isNaN(summary.minFdr));
     }
 
     @Test
@@ -169,6 +174,224 @@ class ShortReadDifferentialTest {
         assertTrue(summary.apaChange);
         assertEquals("no_directional_shift", summary.apaDirection);
     }
+
+
+    @Test
+    void computesBonferroniTutrEventPvalueAndKeepsSiteDiagnostics() {
+        ShortReadGroup group = group();
+
+        List<Sample> samples = Arrays.asList(
+                new Sample("C1", "control", "C1.bam"),
+                new Sample("T1", "case", "T1.bam")
+        );
+
+        Map<String, List<ShortReadQuantification>> bySample =
+                new LinkedHashMap<String, List<ShortReadQuantification>>();
+
+        bySample.put(
+                "C1",
+                singleton(quant(group, 80, 10, 10, 100))
+        );
+
+        bySample.put(
+                "T1",
+                singleton(quant(group, 10, 10, 80, 100))
+        );
+
+        ShortReadDifferential.Results results =
+                ShortReadDifferential.run(
+                        samples,
+                        bySample,
+                        "control",
+                        "case",
+                        10,
+                        3,
+                        0.10,
+                        0.05,
+                        0.10
+                );
+
+        ShortReadDifferential.GroupResult summary =
+                groupResult(results, group.id);
+
+        int testedSites = 0;
+        double minSiteP = Double.POSITIVE_INFINITY;
+        double minSiteQ = Double.POSITIVE_INFINITY;
+
+        for (ShortReadDifferential.SiteResult site : results.sites) {
+            if (!group.id.equals(site.group.id)) {
+                continue;
+            }
+
+            if ("ok".equals(site.status)
+                    && Double.isFinite(site.p)) {
+                testedSites++;
+                minSiteP = Math.min(minSiteP, site.p);
+            }
+
+            if (Double.isFinite(site.q)) {
+                minSiteQ = Math.min(minSiteQ, site.q);
+            }
+        }
+
+        assertEquals(3, testedSites);
+
+        double expectedEventP =
+                Math.min(1.0, minSiteP * testedSites);
+
+        /*
+         * There is only one TUTR event in this test, so BH(event p)
+         * must equal the event p-value itself.
+         */
+        assertEquals(
+                expectedEventP,
+                summary.eventPvalue,
+                1.0E-12
+        );
+
+        assertEquals(
+                expectedEventP,
+                summary.eventFdr,
+                1.0E-12
+        );
+
+        assertEquals(
+                minSiteP,
+                summary.minSitePvalue,
+                1.0E-12
+        );
+
+        assertEquals(
+                minSiteQ,
+                summary.minSiteFdr,
+                1.0E-12
+        );
+
+        /*
+         * Historical aliases must now represent event-level inference,
+         * not the minimum PAS-level statistics.
+         */
+        assertEquals(
+                summary.eventPvalue,
+                summary.minPvalue,
+                1.0E-12
+        );
+
+        assertEquals(
+                summary.eventFdr,
+                summary.minFdr,
+                1.0E-12
+        );
+
+        assertTrue(Double.isFinite(summary.eventPvalue));
+        assertTrue(Double.isFinite(summary.eventFdr));
+    }
+
+
+    @Test
+    void appliesBhAcrossTutrEventsRatherThanPasTests() {
+        ShortReadGroup group1 = group();
+        ShortReadGroup group2 = fourSiteGroup();
+
+        List<Sample> samples = Arrays.asList(
+                new Sample("C1", "control", "C1.bam"),
+                new Sample("T1", "case", "T1.bam")
+        );
+
+        Map<String, List<ShortReadQuantification>> bySample =
+                new LinkedHashMap<String, List<ShortReadQuantification>>();
+
+        bySample.put(
+                "C1",
+                Arrays.asList(
+                        quant(group1, 80, 10, 10, 100),
+                        quant4(group2, 25, 25, 25, 25)
+                )
+        );
+
+        bySample.put(
+                "T1",
+                Arrays.asList(
+                        quant(group1, 10, 10, 80, 100),
+                        quant4(group2, 25, 25, 25, 25)
+                )
+        );
+
+        ShortReadDifferential.Results results =
+                ShortReadDifferential.run(
+                        samples,
+                        bySample,
+                        "control",
+                        "case",
+                        10,
+                        3,
+                        0.10,
+                        0.05,
+                        0.10
+                );
+
+        ShortReadDifferential.GroupResult result1 =
+                groupResult(results, group1.id);
+
+        ShortReadDifferential.GroupResult result2 =
+                groupResult(results, group2.id);
+
+        assertTrue(Double.isFinite(result1.eventPvalue));
+        assertTrue(Double.isFinite(result2.eventPvalue));
+
+        double[] eventPvalues = new double[]{
+                result1.eventPvalue,
+                result2.eventPvalue
+        };
+
+        double[] expectedEventFdr =
+                MultipleTesting.bh(eventPvalues);
+
+        assertEquals(
+                expectedEventFdr[0],
+                result1.eventFdr,
+                1.0E-12
+        );
+
+        assertEquals(
+                expectedEventFdr[1],
+                result2.eventFdr,
+                1.0E-12
+        );
+
+        /*
+         * The backwards-compatible FDR field must follow the TUTR-event
+         * BH correction, not the PAS/site-level BH correction.
+         */
+        assertEquals(
+                result1.eventFdr,
+                result1.minFdr,
+                1.0E-12
+        );
+
+        assertEquals(
+                result2.eventFdr,
+                result2.minFdr,
+                1.0E-12
+        );
+    }
+
+
+    private static ShortReadDifferential.GroupResult groupResult(
+            ShortReadDifferential.Results results,
+            String groupId
+    ) {
+        for (ShortReadDifferential.GroupResult result : results.groups) {
+            if (groupId.equals(result.group.id)) {
+                return result;
+            }
+        }
+
+        throw new AssertionError(
+                "Missing TUTR group result: " + groupId
+        );
+    }
+
 
     private static ShortReadGroup group() {
         List<ShortReadSite> sites = Arrays.asList(

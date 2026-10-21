@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 APAURA is a Java toolkit for detecting, quantifying, classifying, and visualizing alternative polyadenylation (APA) from RNA-sequencing data. It supports true 3'-end/direct-RNA evidence, IsoQuant corrected reads, conventional short-read RNA-seq, single-cell APA analysis, RNA-binding-protein motif enrichment, and publication-style locus visualization.
-
+<img width="1672" height="941" alt="APAURA_Infographics" src="https://github.com/user-attachments/assets/114809f5-754e-42f4-98a3-981b48a50f03" />
 **Version:** `0.10.1`
 
 > If you use APAURA, please cite:
@@ -117,7 +117,7 @@ APAURA.jar
 Check the version:
 
 ```bash
-java -jar APAURA.jar --version
+apaura --version
 ```
 
 Expected:
@@ -134,7 +134,7 @@ Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis
 ### Conventional short-read RNA-seq
 
 ```bash
-java -jar APAURA.jar short-read --samples samples.tsv  --gtf annotation.gtf --control control --case treated --library reverse --out results
+apaura short-read --samples samples.tsv  --gtf annotation.gtf --control control --case treated --library reverse --out results
 ```
 
 Short-read fragment ends are **not** interpreted as cleavage sites. APAURA instead uses transcript-aware annotation, CIGAR-aware coverage, annotated terminal PAS structure, terminal exon group usage, and intronic termination evidence to quantify TUTR, ALE, and IPA.
@@ -150,7 +150,7 @@ reverse
 ### Direct RNA / true 3'-end evidence
 
 ```bash
-java -jar APAURA.jar run-direct --samples samples.tsv --gtf annotation.gtf --control control --case treated --out results
+apaura run-direct --samples samples.tsv --gtf annotation.gtf --control control --case treated --out results
 ```
 
 To preserve exact single-nucleotide cleavage coordinates:
@@ -162,14 +162,14 @@ To preserve exact single-nucleotide cleavage coordinates:
 ### IsoQuant corrected reads
 
 ```bash
-java -jar APAURA.jar run-isoquant --samples isoquant_samples.tsv --gtf annotation.gtf --control control --case treated --out results
+apaura run-isoquant --samples isoquant_samples.tsv --gtf annotation.gtf --control control --case treated --out results
 ```
 ### Single-cell alternative polyadenylation
 
 APAURA provides a dedicated `sc` mode for single-cell alternative polyadenylation analysis.
 
 ```bash
-java -jar APAURA.jar sc --help
+apaura sc --help
 ```
 
 The single-cell workflow is organized into six commands:
@@ -226,7 +226,7 @@ With sufficient biological replication, APAURA can perform replicate-supported c
 ### 1. Build a PAS catalog from GTF/GFF annotation
 
 ```bash
-java -jar APAURA.jar sc gtf-sites --annotation annotation.gtf --out sites.tsv
+apaura sc gtf-sites --annotation annotation.gtf --out sites.tsv
 ```
 
 Nearby annotated transcript ends are clustered into candidate PAS. The default clustering distance is 24 nt and can be changed with:
@@ -263,7 +263,7 @@ UNRESOLVED
 Existing PAS calls can be converted into the APAURA single-cell PAS format:
 
 ```bash
-java -jar APAURA.jar sc import-sites --help
+apaura sc import-sites --help
 ```
 
 This allows experimentally derived or externally detected PAS catalogs to be used instead of, or together with, annotation-derived transcript ends.
@@ -273,7 +273,7 @@ This allows experimentally derived or externally detected PAS catalogs to be use
 Multiple PAS catalogs can be combined into one consensus catalog:
 
 ```bash
-java -jar APAURA.jar sc merge-sites --help
+apaura sc merge-sites --help
 ```
 
 This is useful when PAS evidence comes from several sources, for example:
@@ -297,7 +297,7 @@ Single-cell alignments are assigned to compatible PAS while retaining sample, ce
 Example:
 
 ```bash
-java -jar APAURA.jar sc quantify --sites sites.tsv --alignment sample.bam  --sample-id SAMPLE_1 --gene-tag GX --three-prime-by gene --site-window 50 --out SAMPLE_1.counts.tsv
+apaura sc quantify --sites sites.tsv --alignment sample.bam  --sample-id SAMPLE_1 --gene-tag GX --three-prime-by gene --site-window 50 --out SAMPLE_1.counts.tsv
 ```
 
 The basic count representation is:
@@ -333,7 +333,7 @@ CELL003    SAMPLE_1     T_cell
 Run:
 
 ```bash
-java -jar APAURA.jar sc reference --sites sites.tsv --counts counts.tsv --cells cells.tsv --group-by cell_type --out reference_results
+apaura sc reference --sites sites.tsv --counts counts.tsv --cells cells.tsv --group-by cell_type --out reference_results
 ```
 
 Multiple grouping variables can be combined:
@@ -369,13 +369,13 @@ TRT_2        treated
 Run:
 
 ```bash
-java -jar APAURA.jar sc compare --sites sites.tsv --samples samples.tsv --counts counts.tsv --control control --treated treated --out comparison_results
+apaura sc compare --sites sites.tsv --samples samples.tsv --counts counts.tsv --control control --treated treated --out comparison_results
 ```
 
 For cell-context-aware comparisons, cell metadata and grouping variables can also be supplied:
 
 ```bash
-java -jar APAURA.jar sc compare --sites sites.tsv --samples samples.tsv --counts counts.tsv --cells cells.tsv --group-by cell_type --control control --treated treated --out comparison_results
+apaura sc compare --sites sites.tsv --samples samples.tsv --counts counts.tsv --cells cells.tsv --group-by cell_type --control control --treated treated --out comparison_results
 ```
 
 Important comparison options include:
@@ -483,19 +483,19 @@ For example, a proximal/distal redistribution may have different biological mean
 For command-specific options:
 
 ```bash
-java -jar APAURA.jar sc gtf-sites --help
-java -jar APAURA.jar sc import-sites --help
-java -jar APAURA.jar sc merge-sites --help
-java -jar APAURA.jar sc quantify --help
-java -jar APAURA.jar sc reference --help
-java -jar APAURA.jar sc compare --help
+apaura sc gtf-sites --help
+apaura sc import-sites --help
+apaura sc merge-sites --help
+apaura sc quantify --help
+apaura sc reference --help
+apaura sc compare --help
 ```
 
 
 ### RBP motif enrichment
 
 ```bash
-java -jar APAURA.jar rbp-enrich --sites results/apa_sites.tsv --genes results/apa.tsv --fasta genome.fa --motifs rbp_motifs.meme --out rbp_results
+apaura rbp-enrich --sites results/apa_sites.tsv --genes results/apa.tsv --fasta genome.fa --motifs rbp_motifs.meme --out rbp_results
 ```
 
 The RBP module tests sequence motifs around regulated PAS and, for ALE events, terminal-exon splice-acceptor windows. Enrichment identifies **candidate regulatory associations**; it is not evidence of direct binding or causality by itself.
@@ -537,7 +537,7 @@ TRT_2	treated	/path/TRT_2_isoquant
 When `--results` is supplied, the plot can combine normalized coverage with tested APA results.
 
 ```bash
-java -jar APAURA.jar plot-region --results results --gene HNRNPA2B1 --samples samples.tsv --gtf annotation.gtf --control U1_WT --case U1_MUT --library reverse --show-replicates --show-overview --format pdf --out plots/HNRNPA2B1
+apaura plot-region --results results --gene HNRNPA2B1 --samples samples.tsv --gtf annotation.gtf --control U1_WT --case U1_MUT --library reverse --show-replicates --show-overview --format pdf --out plots/HNRNPA2B1
 ```
 
 Depending on the locus and analysis mode, the figure can include:
@@ -557,7 +557,7 @@ Depending on the locus and analysis mode, the figure can include:
 A completed APAURA result directory is **not required**.
 
 ```bash
-java -jar APAURA.jar plot-region --samples samples.tsv --gtf annotation.gtf --gene HNRNPA2B1 --control U1_WT --case U1_MUT --library reverse --show-replicates --show-overview --format pdf --out plots/HNRNPA2B1
+apaura plot-region --samples samples.tsv --gtf annotation.gtf --gene HNRNPA2B1 --control U1_WT --case U1_MUT --library reverse --show-replicates --show-overview --format pdf --out plots/HNRNPA2B1
 ```
 
 Standalone mode shows:
@@ -574,19 +574,19 @@ Standalone mode **does not perform differential APA testing**. Therefore it does
 ### Multiple genes
 
 ```bash
-java -jar APAURA.jar plot-region --samples samples.tsv --gtf annotation.gtf --gene HNRNPA2B1,PLA2G12A,TMEM254 --control U1_WT --case U1_MUT --library reverse --show-overview --format pdf --out plots
+apaura plot-region --samples samples.tsv --gtf annotation.gtf --gene HNRNPA2B1,PLA2G12A,TMEM254 --control U1_WT --case U1_MUT --library reverse --show-overview --format pdf --out plots
 ```
 
 Or:
 
 ```bash
-java -jar APAURA.jar plot-region --samples samples.tsv --gtf annotation.gtf --genes-file genes.txt --control U1_WT --case U1_MUT --library reverse --out plots
+apaura plot-region --samples samples.tsv --gtf annotation.gtf --genes-file genes.txt --control U1_WT --case U1_MUT --library reverse --out plots
 ```
 
 ### Genomic region
 
 ```bash
-java -jar APAURA.jar plot-region --samples samples.tsv --gtf annotation.gtf --region chr7:26170000-26197000 --control U1_WT --case U1_MUT --library reverse --format pdf --out plots/chr7_region
+apaura plot-region --samples samples.tsv --gtf annotation.gtf --region chr7:26170000-26197000 --control U1_WT --case U1_MUT --library reverse --format pdf --out plots/chr7_region
 ```
 
 See [`docs/TUTORIAL_PLOT_REGION.md`](docs/TUTORIAL_PLOT_REGION.md) for details.
@@ -745,14 +745,14 @@ APAURA v0.10.1 has several intentional boundaries:
 ## Help
 
 ```bash
-java -jar APAURA.jar --help
+apaura --help
 
-java -jar APAURA.jar run-direct --help
-java -jar APAURA.jar run-isoquant --help
-java -jar APAURA.jar short-read --help
-java -jar APAURA.jar plot-region --help
-java -jar APAURA.jar rbp-enrich --help
-java -jar APAURA.jar ends --help
+apaura run-direct --help
+apaura run-isoquant --help
+apaura short-read --help
+apaura plot-region --help
+apaura rbp-enrich --help
+apaura ends --help
 ```
 
 ---
@@ -781,7 +781,7 @@ java -jar APAURA.jar ends --help
 ## Citation
 
 ```bash
-java -jar APAURA.jar --citation
+apaura --citation
 ```
 
 Please cite:

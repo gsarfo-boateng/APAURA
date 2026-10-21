@@ -5,6 +5,8 @@ import org.apaura.io.SampleSheet;
 import org.apaura.model.EndKey;
 import org.apaura.model.Sample;
 import org.apaura.model.SiteCluster;
+import org.apaura.output.CanonicalOutputWriter;
+import org.apaura.output.LongReadCanonicalAdapter;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -93,6 +95,10 @@ public final class DirectApaPipeline {
             double tutrThreshold
     ) throws Exception {
         File outputDirectory = ensureOutputDirectory(outDir);
+        File detailsDirectory =
+                CanonicalOutputWriter.prepareDetailsDirectory(
+                        outputDirectory
+                );
         List<Sample> samples = SampleSheet.read(sampleSheet);
         validateConditions(samples, control, caseCondition);
 
@@ -134,7 +140,7 @@ public final class DirectApaPipeline {
         );
 
         writeSites(
-                new File(outputDirectory, "pas_all.bed"),
+                new File(detailsDirectory, "pas_all.bed"),
                 allSites
         );
 
@@ -150,10 +156,10 @@ public final class DirectApaPipeline {
         List<SiteCluster> retainedSites = filtered.retained;
         ArchitectureAnalysis.annotateSiteRoles(retainedSites);
 
-        writeSites(new File(outputDirectory, "pas.bed"), retainedSites);
-        writeMatrix(new File(outputDirectory, "pas_counts.tsv"), samples, retainedSites);
+        writeSites(new File(detailsDirectory, "pas.bed"), retainedSites);
+        writeMatrix(new File(detailsDirectory, "pas_counts.tsv"), samples, retainedSites);
         writeUsage(
-                new File(outputDirectory, "pau.tsv"),
+                new File(detailsDirectory, "pau.tsv"),
                 samples,
                 retainedSites,
                 filtered.geneTotals
@@ -188,14 +194,14 @@ public final class DirectApaPipeline {
                 tutrThreshold
         );
 
-        writeSiteDiff(new File(outputDirectory, "apa_sites.tsv"), differential.sites);
-        writeGene(new File(outputDirectory, "apa.tsv"), differential.genes);
+        writeSiteDiff(new File(detailsDirectory, "apa_sites.tsv"), differential.sites);
+        writeGene(new File(detailsDirectory, "apa.tsv"), differential.genes);
         writeArchitecture(
-                new File(outputDirectory, "apa_architecture.tsv"),
+                new File(detailsDirectory, "apa_architecture.tsv"),
                 differential.genes
         );
         writeRunInfo(
-                new File(outputDirectory, "run_info.txt"),
+                new File(detailsDirectory, "run_info.txt"),
                 inputFormat,
                 clusterDistance,
                 clusterRepresentative,
@@ -211,6 +217,30 @@ public final class DirectApaPipeline {
                 tutrThreshold,
                 control,
                 caseCondition
+        );
+
+        LongReadCanonicalAdapter.write(
+                outputDirectory,
+                sampleSheet,
+                gtf,
+                inputFormat,
+                control,
+                caseCondition,
+                clusterDistance,
+                clusterRepresentative,
+                minGeneReads,
+                minSiteReads,
+                minPau,
+                minDeltaPau,
+                fdr,
+                wpiThreshold,
+                internalExonThreshold,
+                aleThreshold,
+                ipaThreshold,
+                tutrThreshold,
+                retainedSites,
+                differential,
+                architecture
         );
     }
 

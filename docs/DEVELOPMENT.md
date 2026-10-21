@@ -14,9 +14,9 @@ Do not rely only on compiling individual Java files.
 Then smoke-test:
 
 ```bash
-java -jar APAURA.jar --version
-java -jar APAURA.jar short-read --help
-java -jar APAURA.jar plot-region --help
+apaura --version
+apaura short-read --help
+apaura plot-region --help
 ```
 
 ## R resource validation

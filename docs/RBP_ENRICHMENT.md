@@ -10,7 +10,7 @@ does not by itself demonstrate physical RBP binding or causal regulation.
 ## Required inputs
 
 ```bash
-java -jar APAURA.jar rbp-enrich   --sites results/apa_sites.tsv   --genes results/apa.tsv   --fasta genome.fa   --motifs rbp_motifs.meme   --out rbp_results
+apaura rbp-enrich   --sites results/apa_sites.tsv   --genes results/apa.tsv   --fasta genome.fa   --motifs rbp_motifs.meme   --out rbp_results
 ```
 
 Required files:

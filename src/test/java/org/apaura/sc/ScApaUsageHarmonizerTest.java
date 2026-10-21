@@ -63,6 +63,24 @@ class ScApaUsageHarmonizerTest {
         assertEquals("yes", row.s("apa_change"));
         assertEquals("no_directional_shift", row.s("apa_direction"));
         assertEquals("redistribution", row.s("apa_classification"));
+
+        Table canonical = firstDataRow(out.resolve("apa.tsv"));
+        assertEquals("ALL", canonical.s("group"));
+        assertEquals("TUTR", canonical.s("apa_architecture"));
+        assertEquals("yes", canonical.s("apa_change"));
+        assertEquals(
+                "no_directional_shift",
+                canonical.s("apa_direction")
+        );
+        assertEquals("TUTR", canonical.s("primary_mechanism"));
+        assertEquals(0.12, canonical.d("effect_size"), 1.0e-9);
+        assertEquals(0.01, canonical.d("pvalue"), 1.0e-9);
+        assertEquals(0.01, canonical.d("fdr"), 1.0e-9);
+
+        Table event = firstDataRow(out.resolve("apa_events.tsv"));
+        assertEquals("ALL|G1|TUTR", event.s("event_id"));
+        assertEquals("TUTR", event.s("mechanism"));
+        assertEquals(0.01, event.d("fdr"), 1.0e-9);
     }
 
     @Test
@@ -175,6 +193,102 @@ class ScApaUsageHarmonizerTest {
         assertEquals("2", row.s("n_treated_samples"));
         assertTrue(row.d("delta_wpi") > 0.6);
         assertEquals("lengthening", row.s("apa_direction"));
+
+        Table canonical = firstDataRow(out.resolve("apa.tsv"));
+        assertEquals("T::CD4", canonical.s("group"));
+        assertEquals("G1", canonical.s("gene_id"));
+        assertEquals("TUTR", canonical.s("primary_mechanism"));
+        assertEquals("lengthening", canonical.s("apa_direction"));
+
+        Table site = firstDataRow(out.resolve("apa_sites.tsv"));
+        assertEquals("T::CD4", site.s("group"));
+        assertEquals("T::CD4|G1|TUTR", site.s("event_id"));
+        assertEquals("NA", site.s("pvalue"));
+        assertEquals("NA", site.s("fdr"));
+
+        assertTrue(Files.isRegularFile(
+                out.resolve("details/apaura_usage.tsv")
+        ));
+        assertTrue(Files.isRegularFile(
+                out.resolve("details/apaura_site_usage.tsv")
+        ));
+        assertTrue(Files.isRegularFile(
+                out.resolve("details/all_results.tsv")
+        ));
+    }
+
+    @Test
+    void canonicalSingleCellHeadersRetainGroupIdentity()
+            throws Exception {
+        Path dir = Files.createTempDirectory("apaura-sc-canonical-header-");
+        Path out = Files.createDirectories(dir.resolve("out"));
+
+        write(dir.resolve("sites.tsv"),
+                "site_id\tgene_id\tgene_symbol\tchrom\tposition\tstrand\n"
+                        + "P1\tG1\tG1\tchr1\t100\t+\n"
+                        + "P2\tG1\tG1\tchr1\t200\t+\n");
+        write(dir.resolve("samples.tsv"),
+                "sample_id\tcondition\n"
+                        + "C1\tcontrol\nC2\tcontrol\n"
+                        + "T1\ttreated\nT2\ttreated\n");
+        write(dir.resolve("counts.tsv"),
+                "sample_id\tgroup\tsite_id\tcount\n"
+                        + "C1\tALL\tP1\t9\nC1\tALL\tP2\t1\n"
+                        + "C2\tALL\tP1\t9\nC2\tALL\tP2\t1\n"
+                        + "T1\tALL\tP1\t1\nT1\tALL\tP2\t9\n"
+                        + "T2\tALL\tP1\t1\nT2\tALL\tP2\t9\n");
+        writeLegacy(out.resolve("all_results.tsv"),
+                "ALL", "G1", 2,
+                "REPLICATED_DIFFERENTIAL",
+                "0.10", "0.90", "0.80",
+                "0.001", "0.001", "1.0", "1.0",
+                "WELCH_T_SAMPLE_UTR_INDEX",
+                "FISHER_POOLED_DESCRIPTIVE",
+                "LENGTHENING");
+
+        ScApaUsageHarmonizer.run(new String[]{
+                "compare",
+                "--sites", dir.resolve("sites.tsv").toString(),
+                "--samples", dir.resolve("samples.tsv").toString(),
+                "--counts", dir.resolve("counts.tsv").toString(),
+                "--control", "control",
+                "--treated", "treated",
+                "--out", out.toString()
+        });
+
+        List<String> apa = Files.readAllLines(
+                out.resolve("apa.tsv"),
+                StandardCharsets.UTF_8
+        );
+        List<String> events = Files.readAllLines(
+                out.resolve("apa_events.tsv"),
+                StandardCharsets.UTF_8
+        );
+        List<String> sites = Files.readAllLines(
+                out.resolve("apa_sites.tsv"),
+                StandardCharsets.UTF_8
+        );
+        List<String> runInfo = Files.readAllLines(
+                out.resolve("run_info.txt"),
+                StandardCharsets.UTF_8
+        );
+
+        assertTrue(apa.get(0).startsWith(
+                "group\tchrom\tstart\tend\tstrand\tgene_id"
+        ));
+        assertTrue(events.get(0).startsWith(
+                "group\tchrom\tstart\tend\tstrand\tgene_id"
+        ));
+        assertTrue(sites.get(0).startsWith(
+                "group\tchrom\tposition\tstrand\tgene_id"
+        ));
+        assertEquals(
+                "output_schema_version=1.0",
+                runInfo.get(0)
+        );
+        assertTrue(runInfo.contains(
+                "output_schema_variant=single-cell-grouped"
+        ));
     }
 
     private static String sample(String id, int a, int b, int c, int d) {

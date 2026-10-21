@@ -34,7 +34,7 @@ Accepted path column names include `bam`, `file`, and `path`.
 ## Run
 
 ```bash
-java -jar APAURA.jar short-read \
+apaura short-read \
   --samples samples.tsv \
   --gtf annotation.gtf \
   --control WT \
@@ -67,7 +67,7 @@ java -jar APAURA.jar short-read \
 Use the installed JAR help for the authoritative list:
 
 ```bash
-java -jar APAURA.jar short-read --help
+apaura short-read --help
 ```
 
 ## Replicate-aware inference

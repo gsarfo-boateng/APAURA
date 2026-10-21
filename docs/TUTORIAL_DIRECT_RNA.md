@@ -15,7 +15,7 @@ T2\ttreated\t/path/T2.bam
 ## Run
 
 ```bash
-java -jar APAURA.jar run-direct \
+apaura run-direct \
   --samples samples.tsv \
   --gtf annotation.gtf \
   --control control \
@@ -36,7 +36,7 @@ Common controls include `--cluster-distance`, `--cluster-representative`, `--min
 Check exact help with:
 
 ```bash
-java -jar APAURA.jar run-direct --help
+apaura run-direct --help
 ```
 
 Typical outputs include:

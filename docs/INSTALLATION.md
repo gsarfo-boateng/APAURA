@@ -23,9 +23,9 @@ APAURA development should always use the full build workflow after source change
 ## Verify the final JAR
 
 ```bash
-java -jar APAURA.jar --version
-java -jar APAURA.jar short-read --help
-java -jar APAURA.jar plot-region --help
+apaura --version
+apaura short-read --help
+apaura plot-region --help
 ```
 
 Also verify required runtime classes are packaged:
@@ -63,5 +63,5 @@ samtools index sample.bam
 mvn clean package
 ./build.sh
 ./tests/run_tests.sh
-java -jar APAURA.jar --version
+apaura --version
 ```

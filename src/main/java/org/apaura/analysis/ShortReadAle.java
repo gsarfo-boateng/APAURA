@@ -8,6 +8,7 @@ import org.apaura.model.TranscriptModel;
 import org.apaura.stats.BetaBinomial;
 import org.apaura.stats.FisherExact;
 import org.apaura.stats.MultipleTesting;
+import org.apaura.stats.ModeratedDirichletMultinomial;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -183,6 +184,12 @@ public final class ShortReadAle {
         public double switchIndex = Double.NaN;
         public double minPvalue = Double.NaN;
         public double minFdr = Double.NaN;
+        public double eventPvalue = Double.NaN;
+        public double eventFdr = Double.NaN;
+        public double eventPrecision = Double.NaN;
+        public String eventMethod = "not_tested";
+        public double minBranchPvalue = Double.NaN;
+        public double minBranchFdr = Double.NaN;
         public int controlTotalReplicates;
         public int caseTotalReplicates;
         public int controlAnyEvidence;
@@ -531,6 +538,17 @@ public final class ShortReadAle {
             ));
         }
 
+        applyModeratedDmToGenes(
+                samples,
+                bySample,
+                control,
+                caseCondition,
+                minSampleEvidence,
+                results.genes
+        );
+        applyGeneFdr(results.genes);
+        classifyGenes(results.genes, minSwitch, fdr, wpiThreshold);
+
         Collections.sort(results.branches, new Comparator<BranchResult>() {
             @Override
             public int compare(BranchResult left, BranchResult right) {
@@ -750,34 +768,159 @@ public final class ShortReadAle {
         }
 
         result.status = "ok";
-        boolean significant = false;
+        int testedBranches = 0;
         if (branchResults != null) {
             for (BranchResult branch : branchResults) {
-                if (Double.isFinite(branch.p)
-                        && (!Double.isFinite(result.minPvalue)
-                        || branch.p < result.minPvalue)) {
-                    result.minPvalue = branch.p;
+                if ("ok".equals(branch.status) && Double.isFinite(branch.p)) {
+                    testedBranches++;
+                    if (!Double.isFinite(result.minBranchPvalue)
+                            || branch.p < result.minBranchPvalue) {
+                        result.minBranchPvalue = branch.p;
+                    }
                 }
-                if (Double.isFinite(branch.q)) {
-                    if (!Double.isFinite(result.minFdr) || branch.q < result.minFdr) {
-                        result.minFdr = branch.q;
-                    }
-                    if ("ok".equals(branch.status)
-                            && branch.q <= fdr
-                            && Double.isFinite(branch.delta)
-                            && Math.abs(branch.delta) >= minBranchDelta) {
-                        significant = true;
-                    }
+                if (Double.isFinite(branch.q)
+                        && (!Double.isFinite(result.minBranchFdr)
+                        || branch.q < result.minBranchFdr)) {
+                    result.minBranchFdr = branch.q;
                 }
             }
         }
-        result.aleChange = significant
-                && Double.isFinite(result.switchIndex)
-                && result.switchIndex >= minSwitch;
-        result.aleDirection = result.aleChange
-                ? inferredDirection(result.deltaWpi, wpiThreshold)
-                : "stable";
+
+        if (unreplicated) {
+            if (testedBranches == 0 || !Double.isFinite(result.minBranchPvalue)) {
+                result.status = "insufficient_evidence";
+                return result;
+            }
+            result.eventPvalue = Math.min(
+                    1.0,
+                    result.minBranchPvalue * testedBranches
+            );
+            result.eventMethod = "bonferroni-min-branch-unreplicated";
+            result.minPvalue = result.eventPvalue;
+        }
+
         return result;
+    }
+
+    private static void applyModeratedDmToGenes(
+            List<Sample> samples,
+            Map<String, List<Quantification>> bySample,
+            String control,
+            String caseCondition,
+            int minSampleEvidence,
+            List<GeneResult> genes
+    ) {
+        List<ModeratedDirichletMultinomial.Event> events =
+                new ArrayList<ModeratedDirichletMultinomial.Event>();
+        Map<String, GeneResult> byId =
+                new LinkedHashMap<String, GeneResult>();
+
+        for (int groupIndex = 0; groupIndex < genes.size(); groupIndex++) {
+            GeneResult result = genes.get(groupIndex);
+            if (!"ok".equals(result.status)) continue;
+
+            boolean unreplicated = result.controlTotalReplicates == 1
+                    && result.caseTotalReplicates == 1;
+            if (unreplicated) continue;
+
+            List<int[]> rows = new ArrayList<int[]>();
+            List<Integer> labels = new ArrayList<Integer>();
+
+            for (Sample sample : samples) {
+                boolean isControl = sample.condition.equals(control);
+                boolean isCase = sample.condition.equals(caseCondition);
+                if (!isControl && !isCase) continue;
+
+                Quantification q = bySample.get(sample.name).get(groupIndex);
+                if (q.totalEvidenceReads < minSampleEvidence) continue;
+
+                rows.add(Arrays.copyOf(q.branchReads, q.branchReads.length));
+                labels.add(isControl ? 0 : 1);
+            }
+
+            if (rows.isEmpty()) continue;
+
+            int[][] counts = new int[rows.size()][];
+            int[] groupLabels = new int[rows.size()];
+            for (int i = 0; i < rows.size(); i++) {
+                counts[i] = rows.get(i);
+                groupLabels[i] = labels.get(i);
+            }
+
+            result.eventPvalue = Double.NaN;
+            result.eventFdr = Double.NaN;
+            result.minPvalue = Double.NaN;
+            result.minFdr = Double.NaN;
+            result.eventMethod = "moderated-DM-LRT";
+
+            events.add(new ModeratedDirichletMultinomial.Event(
+                    result.group.id,
+                    counts,
+                    groupLabels
+            ));
+            byId.put(result.group.id, result);
+        }
+
+        ModeratedDirichletMultinomial.BatchResult batch =
+                ModeratedDirichletMultinomial.test(events);
+
+        for (ModeratedDirichletMultinomial.Result dm : batch.results) {
+            GeneResult result = byId.get(dm.id);
+            if (result == null) continue;
+
+            if (dm.converged && Double.isFinite(dm.pvalue)) {
+                result.eventPvalue = dm.pvalue;
+                result.minPvalue = dm.pvalue;
+                result.eventPrecision = dm.precision;
+            } else {
+                result.status = "dm_fit_failed";
+                result.eventMethod = "moderated-DM-LRT-failed";
+            }
+        }
+    }
+
+    private static void applyGeneFdr(List<GeneResult> genes) {
+        List<Integer> indices = new ArrayList<Integer>();
+        List<Double> pvalues = new ArrayList<Double>();
+
+        for (int i = 0; i < genes.size(); i++) {
+            if (Double.isFinite(genes.get(i).eventPvalue)) {
+                indices.add(i);
+                pvalues.add(genes.get(i).eventPvalue);
+            }
+        }
+        if (indices.isEmpty()) return;
+
+        double[] p = new double[pvalues.size()];
+        for (int i = 0; i < p.length; i++) p[i] = pvalues.get(i);
+        double[] q = MultipleTesting.bh(p);
+
+        for (int i = 0; i < q.length; i++) {
+            GeneResult result = genes.get(indices.get(i));
+            result.eventFdr = q[i];
+            result.minFdr = q[i];
+        }
+    }
+
+    private static void classifyGenes(
+            List<GeneResult> genes,
+            double minSwitch,
+            double fdr,
+            double wpiThreshold
+    ) {
+        for (GeneResult result : genes) {
+            if (!"ok".equals(result.status)) continue;
+
+            result.aleChange =
+                    Double.isFinite(result.eventFdr)
+                    && result.eventFdr <= fdr
+                    && Double.isFinite(result.switchIndex)
+                    && result.switchIndex >= minSwitch;
+
+            result.aleDirection = result.aleChange
+                    ? inferredDirection(result.deltaWpi, wpiThreshold)
+                    : "stable";
+        }
     }
 
     private static double weightedPositionIndex(Group group, double[] usage) {

@@ -9,13 +9,13 @@ The plotting workflow requires `Rscript`, `samtools`, and the R/Bioconductor pac
 Check the complete CLI:
 
 ```bash
-java -jar APAURA.jar plot-region --help
+apaura plot-region --help
 ```
 
 ## Completed-results mode
 
 ```bash
-java -jar APAURA.jar plot-region \
+apaura plot-region \
   --results results \
   --gene HNRNPA2B1 \
   --samples samples.tsv \
@@ -36,7 +36,7 @@ Depending on the analysis and locus, APAURA can display mean normalized coverage
 `--results` is optional.
 
 ```bash
-java -jar APAURA.jar plot-region \
+apaura plot-region \
   --samples samples.tsv \
   --gtf annotation.gtf \
   --gene HNRNPA2B1 \
@@ -54,7 +54,7 @@ Standalone mode displays coverage and annotation-derived terminal structure. It 
 ## Multiple genes
 
 ```bash
-java -jar APAURA.jar plot-region \
+apaura plot-region \
   --samples samples.tsv \
   --gtf annotation.gtf \
   --gene HNRNPA2B1,PLA2G12A,TMEM254 \
@@ -71,7 +71,7 @@ Or use `--genes-file genes.txt`.
 ## Genomic region
 
 ```bash
-java -jar APAURA.jar plot-region \
+apaura plot-region \
   --samples samples.tsv \
   --gtf annotation.gtf \
   --region chr7:26170000-26197000 \

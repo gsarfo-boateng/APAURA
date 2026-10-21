@@ -15,7 +15,7 @@ T2\ttreated\t/path/T2_isoquant
 ## Run
 
 ```bash
-java -jar APAURA.jar run-isoquant \
+apaura run-isoquant \
   --samples isoquant_samples.tsv \
   --gtf annotation.gtf \
   --control control \
@@ -26,7 +26,7 @@ java -jar APAURA.jar run-isoquant \
 IsoQuant mode shares the direct/long-read APA framework. Use:
 
 ```bash
-java -jar APAURA.jar run-isoquant --help
+apaura run-isoquant --help
 ```
 
 for the exact supported options in the installed JAR.

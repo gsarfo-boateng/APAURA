@@ -1,5 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+assert_re () {
+  python3 - "$1" "$2" <<'PYRE'
+import re
+import sys
+
+pattern = re.compile(sys.argv[1])
+
+with open(sys.argv[2], encoding="utf-8") as fh:
+    for line in fh:
+        if pattern.search(line):
+            sys.exit(0)
+
+sys.exit(1)
+PYRE
+}
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
@@ -21,10 +38,50 @@ java -jar APAURA.jar run-direct \
   --cluster-distance 0 --min-total 1 \
   --min-gene-reads 10 --min-site-reads 5 --min-pau 0.01 \
   --out tests/out_direct
-grep -q $'TUTR\tTUTR\tyes\tshortening\tshortening' tests/out_direct/apa.tsv
-grep -P -q '^GENE1\t.*\tTUTR\tTUTR' tests/out_direct/apa.tsv
-grep -q $'0.550000\t-0.550000' tests/out_direct/apa.tsv
-grep -q 'ks_fdr' tests/out_direct/apa.tsv
+# Canonical direct-RNA output regression test.
+awk -F'\t' '
+NR == 1 {
+    for (i = 1; i <= NF; i++) h[$i] = i
+    next
+}
+$h["gene_id"] == "GENE1" &&
+$h["apa_architecture"] == "TUTR" &&
+$h["apa_change"] == "yes" &&
+$h["apa_direction"] == "shortening" &&
+$h["changed_mechanisms"] == "TUTR" &&
+$h["primary_mechanism"] == "TUTR" &&
+$h["number_sites"] == "2" &&
+($h["effect_size"] + 0) > 0.549999 &&
+($h["effect_size"] + 0) < 0.550001 &&
+$h["status"] == "ok" {
+    found = 1
+}
+END {
+    exit(found ? 0 : 1)
+}' tests/out_direct/apa.tsv
+
+# The primary mechanism must also be represented in apa_events.tsv.
+awk -F'\t' '
+NR == 1 {
+    for (i = 1; i <= NF; i++) h[$i] = i
+    next
+}
+$h["gene_id"] == "GENE1" &&
+$h["mechanism"] == "TUTR" &&
+$h["apa_change"] == "yes" &&
+$h["apa_direction"] == "shortening" &&
+$h["number_sites"] == "2" &&
+($h["effect_size"] + 0) > 0.549999 &&
+($h["effect_size"] + 0) < 0.550001 {
+    found = 1
+}
+END {
+    exit(found ? 0 : 1)
+}' tests/out_direct/apa_events.tsv
+
+# Legacy-rich diagnostics are preserved under details/.
+grep -q $'0.550000\t-0.550000' tests/out_direct/details/apa.tsv
+grep -q 'ks_fdr' tests/out_direct/details/apa.tsv
 java -jar APAURA.jar ends --bam tests/synthetic.bam --out tests/synthetic.ends.tsv
 grep -q $'chr1\t699\t700' tests/synthetic.ends.tsv
 grep -q $'chr1\t899\t900' tests/synthetic.ends.tsv
@@ -95,20 +152,64 @@ java -jar APAURA.jar run-direct \
   --control control --case treated \
   --cluster-distance 0 --min-gene-reads 10 --min-site-reads 5 --min-pau 0.01 \
   --out tests/out_architecture
-grep -P -q '^TUTR1\tTUTR1\tprotein_coding\tTUTR\tTUTR\tyes\tshortening\tshortening\tnot_applicable\tnot_applicable\tnot_applicable\tTUTR:shortening\tTUTR\tTUTR=shortening' tests/out_architecture/apa.tsv
-grep -P -q '^ALE1\tALE1\tprotein_coding\tALE\tALE\tyes\tdistal_switch\tnot_applicable\tdistal_switch\tnot_applicable\tnot_applicable\tALE:distal_switch\tALE\tALE=distal_switch' tests/out_architecture/apa.tsv
-grep -P -q '^IPA1\tIPA1\tprotein_coding\tSINGLE_PAS\tnone\tyes\tgain\tnot_applicable\tnot_applicable\tgain\tnot_applicable\tIPA:gain\tIPA\tIPA=gain' tests/out_architecture/apa.tsv
-grep -P -q '^MIX1\tMIX1\tprotein_coding\tmixed\tTUTR\+ALE\tyes\tcomplex\tshortening\tdistal_switch\tnot_applicable\tnot_applicable\tmixed:complex\tALE\+TUTR\tALE=distal_switch;TUTR=shortening' tests/out_architecture/apa.tsv
-grep -P -q '^NODIR1\tNODIR1\tprotein_coding\tTUTR\tTUTR\tyes\tno_directional_shift\tno_directional_shift\tnot_applicable\tnot_applicable\tnot_applicable\tTUTR:no_directional_shift\tTUTR\tTUTR=no_directional_shift' tests/out_architecture/apa.tsv
-grep -P -q '^TUTRIPA1\tTUTRIPA1\tprotein_coding\tTUTR\tTUTR\tyes\tcomplex\tshortening\tnot_applicable\tgain\tnot_applicable\tmulti_mechanism:complex\tIPA\+TUTR\tIPA=gain;TUTR=shortening' tests/out_architecture/apa.tsv
-grep -q 'apa_direction' tests/out_architecture/apa_architecture.tsv
-grep -q 'tutr_direction' tests/out_architecture/apa_architecture.tsv
-grep -q 'ale_direction' tests/out_architecture/apa_architecture.tsv
-grep -q 'ipa_direction' tests/out_architecture/apa_architecture.tsv
-grep -q 'apa_event' tests/out_architecture/apa_architecture.tsv
-grep -q 'termination_shift_index' tests/out_architecture/apa_architecture.tsv
-grep -q 'ale_switch_index' tests/out_architecture/apa_architecture.tsv
-grep -q 'delta_tutr_wpi' tests/out_architecture/apa_architecture.tsv
+
+# Canonical architecture-output regression checks.
+test -s tests/out_architecture/apa.tsv
+test -s tests/out_architecture/apa_events.tsv
+test -s tests/out_architecture/apa_sites.tsv
+test -s tests/out_architecture/run_info.txt
+
+grep -qx 'mode=run-direct' tests/out_architecture/run_info.txt
+
+awk -F'\t' '
+NR==1 {
+    for(i=1;i<=NF;i++) h[$i]=i
+    next
+}
+$h["gene_id"]=="TUTR1" &&
+$h["apa_architecture"]=="TUTR" &&
+$h["apa_change"]=="yes" &&
+$h["apa_direction"]=="shortening" &&
+$h["changed_mechanisms"]=="TUTR" &&
+$h["primary_mechanism"]=="TUTR" &&
+$h["status"]=="ok" {
+    found=1
+}
+END { exit(found ? 0 : 1) }
+' tests/out_architecture/apa.tsv
+
+awk -F'\t' '
+NR==1 {
+    for(i=1;i<=NF;i++) h[$i]=i
+    next
+}
+$h["gene_id"]=="TUTR1" &&
+$h["mechanism"]=="TUTR" &&
+$h["apa_change"]=="yes" &&
+$h["apa_direction"]=="shortening" {
+    found=1
+}
+END { exit(found ? 0 : 1) }
+' tests/out_architecture/apa_events.tsv
+
+test -s tests/out_architecture/details/apa.tsv
+test -s tests/out_architecture/details/apa_sites.tsv
+test -s tests/out_architecture/details/apa_architecture.tsv
+test -s tests/out_architecture/details/pau.tsv
+assert_re '^TUTR1\tTUTR1\tprotein_coding\tTUTR\tTUTR\tyes\tshortening\tshortening\tnot_applicable\tnot_applicable\tnot_applicable\tTUTR:shortening\tTUTR\tTUTR=shortening' tests/out_architecture/details/apa.tsv
+assert_re '^ALE1\tALE1\tprotein_coding\tALE\tALE\tyes\tdistal_switch\tnot_applicable\tdistal_switch\tnot_applicable\tnot_applicable\tALE:distal_switch\tALE\tALE=distal_switch' tests/out_architecture/details/apa.tsv
+assert_re '^IPA1\tIPA1\tprotein_coding\tSINGLE_PAS\tnone\tyes\tgain\tnot_applicable\tnot_applicable\tgain\tnot_applicable\tIPA:gain\tIPA\tIPA=gain' tests/out_architecture/details/apa.tsv
+assert_re '^MIX1\tMIX1\tprotein_coding\tmixed\tTUTR\+ALE\tyes\tcomplex\tshortening\tdistal_switch\tnot_applicable\tnot_applicable\tmixed:complex\tALE\+TUTR\tALE=distal_switch;TUTR=shortening' tests/out_architecture/details/apa.tsv
+assert_re '^NODIR1\tNODIR1\tprotein_coding\tTUTR\tTUTR\tyes\tno_directional_shift\tno_directional_shift\tnot_applicable\tnot_applicable\tnot_applicable\tTUTR:no_directional_shift\tTUTR\tTUTR=no_directional_shift' tests/out_architecture/details/apa.tsv
+assert_re '^TUTRIPA1\tTUTRIPA1\tprotein_coding\tTUTR\tTUTR\tyes\tcomplex\tshortening\tnot_applicable\tgain\tnot_applicable\tmulti_mechanism:complex\tIPA\+TUTR\tIPA=gain;TUTR=shortening' tests/out_architecture/details/apa.tsv
+grep -q 'apa_direction' tests/out_architecture/details/apa_architecture.tsv
+grep -q 'tutr_direction' tests/out_architecture/details/apa_architecture.tsv
+grep -q 'ale_direction' tests/out_architecture/details/apa_architecture.tsv
+grep -q 'ipa_direction' tests/out_architecture/details/apa_architecture.tsv
+grep -q 'apa_event' tests/out_architecture/details/apa_architecture.tsv
+grep -q 'termination_shift_index' tests/out_architecture/details/apa_architecture.tsv
+grep -q 'ale_switch_index' tests/out_architecture/details/apa_architecture.tsv
+grep -q 'delta_tutr_wpi' tests/out_architecture/details/apa_architecture.tsv
 
 # Single-cell APA regression tests
 rm -rf tests/sc_synthetic tests/out_sc_reference tests/out_sc_compare
@@ -237,8 +338,8 @@ grep -q 'OBSERVED_' tests/out_sc_compare/all_results.tsv
 grep -q 'apa_architecture' tests/out_sc_compare/all_results.with_architecture.tsv
 grep -q $'\tapd\tusage_jsd\t' tests/out_sc_compare/apaura_usage.tsv
 grep -q $'\tcontrol_pau\ttreated_pau\tdelta_pau' tests/out_sc_compare/apaura_site_usage.tsv
-grep -P -q '^ALL\tGENE1\tGENE1\tchr1\t\+\t2\tUNREPLICATED_OBSERVED_SHIFT\t1\t1\t35\t35\t0\.142857\t0\.857143\t0\.714286\t0\.714286\t.*\tyes\tno\tno\tstable\tlengthening\tstable\tobserved_lengthening\tdescriptive_only\t' tests/out_sc_compare/apaura_usage.tsv
-grep -P -q '^ALL\tGENE2\tGENE2\tchr2\t-\t2\tUNREPLICATED_OBSERVED_SHIFT\t1\t1\t35\t35\t0\.857143\t0\.142857\t-0\.714286\t0\.714286\t.*\tyes\tno\tno\tstable\tshortening\tstable\tobserved_shortening\tdescriptive_only\t' tests/out_sc_compare/apaura_usage.tsv
+assert_re '^ALL\tGENE1\tGENE1\tchr1\t\+\t2\tUNREPLICATED_OBSERVED_SHIFT\t1\t1\t35\t35\t0\.142857\t0\.857143\t0\.714286\t0\.714286\t.*\tyes\tno\tno\tstable\tlengthening\tstable\tobserved_lengthening\tdescriptive_only\t' tests/out_sc_compare/apaura_usage.tsv
+assert_re '^ALL\tGENE2\tGENE2\tchr2\t-\t2\tUNREPLICATED_OBSERVED_SHIFT\t1\t1\t35\t35\t0\.857143\t0\.142857\t-0\.714286\t0\.714286\t.*\tyes\tno\tno\tstable\tshortening\tstable\tobserved_shortening\tdescriptive_only\t' tests/out_sc_compare/apaura_usage.tsv
 
 # RBP motif-enrichment regression test
 python3 tests/make_rbp_synthetic.py
@@ -251,8 +352,8 @@ java -jar APAURA.jar rbp-enrich \
   --upstream 20 --downstream 10 \
   --background-ratio 2 --permutations 200 --seed 7 \
   --out tests/out_rbp
-grep -P -q '^TUTR:shortening\tPAS\tRBP_A\tRBP_A\t4\t8\t4\t0\t' tests/out_rbp/rbp.tsv
-grep -P -q '^ALE:distal_switch\tALE_acceptor\tRBP_C\tRBP_C\t4\t8\t4\t0\t' tests/out_rbp/rbp.tsv
+assert_re '^TUTR:shortening\tPAS\tRBP_A\tRBP_A\t4\t8\t4\t0\t' tests/out_rbp/rbp.tsv
+assert_re '^ALE:distal_switch\tALE_acceptor\tRBP_C\tRBP_C\t4\t8\t4\t0\t' tests/out_rbp/rbp.tsv
 grep -q 'relative_hit_starts' tests/out_rbp/rbp_hits.tsv
 grep -q $'RBP_A\tRBP_A\t-10\t4' tests/out_rbp/rbp_profile.tsv
 

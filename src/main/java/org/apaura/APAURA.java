@@ -346,7 +346,7 @@ public final class APAURA {
             case "version":
             case "--version":
             case "-v":
-                System.out.println("Usage: java -jar APAURA.jar version");
+                System.out.println("Usage: apaura version");
                 return;
             default:
                 throw new IllegalArgumentException("Unknown command: " + command);
@@ -411,25 +411,25 @@ public final class APAURA {
                 "",
 
                 "Examples:",
-                "  java -jar APAURA.jar run-direct --samples samples.tsv --gtf gencode.gtf "
+                "  apaura run-direct --samples samples.tsv --gtf gencode.gtf "
                         + "--cluster-distance 0 --out direct_results",
-                "  java -jar APAURA.jar run-isoquant --samples isoquant_samples.tsv "
+                "  apaura run-isoquant --samples isoquant_samples.tsv "
                         + "--gtf gencode.gtf --out isoquant_results",
-                "  java -jar APAURA.jar short-read --samples samples.tsv --gtf gencode.gtf "
+                "  apaura short-read --samples samples.tsv --gtf gencode.gtf "
                         + "--library unstranded --out short_results",
-                "  java -jar APAURA.jar rbp-enrich --sites results/apa_sites.tsv "
+                "  apaura rbp-enrich --sites results/apa_sites.tsv "
                         + "--genes results/apa.tsv --fasta genome.fa --motifs rbp.meme "
                         + "--out rbp_results",
                 "",
                 "For command-specific help:",
-                "  java -jar APAURA.jar <command> --help"
+                "  apaura <command> --help"
         );
     }
 
     private static void printScHelp() {
         printLines(
                 "Usage:",
-                "  java -jar APAURA.jar sc <command> [options]",
+                "  apaura sc <command> [options]",
                 "",
                 "Single-cell alternative polyadenylation analysis",
                 "",
@@ -442,14 +442,14 @@ public final class APAURA {
                 "  compare        Compare PAS usage between biological conditions",
                 "",
                 "Run:",
-                "  java -jar APAURA.jar sc <command> --help"
+                "  apaura sc <command> --help"
         );
     }
 
     private static void printScImportSitesHelp() {
         printLines(
                 "Usage:",
-                "  java -jar APAURA.jar sc import-sites --input caller.tsv --source NAME --out sites.tsv [options]",
+                "  apaura sc import-sites --input caller.tsv --source NAME --out sites.tsv [options]",
                 "",
                 "Import candidate poly(A) sites from an external APA caller.",
                 "",
@@ -463,14 +463,14 @@ public final class APAURA {
                 "  --*-column VALUE        override detected input columns",
                 "",
                 "Example:",
-                "  java -jar APAURA.jar sc import-sites --input sites.bed --source custom --format bed --out sites.tsv"
+                "  apaura sc import-sites --input sites.bed --source custom --format bed --out sites.tsv"
         );
     }
 
     private static void printScQuantifyHelp() {
         printLines(
                 "Usage:",
-                "  java -jar APAURA.jar sc quantify --sites sites.tsv --alignment sample.sam|bam|cram",
+                "  apaura sc quantify --sites sites.tsv --alignment sample.sam|bam|cram",
                 "    --sample-id ID --out counts.tsv [options]",
                 "",
                 "Quantify single-cell poly(A) site usage from SAM, BAM, or CRAM alignments.",
@@ -490,10 +490,10 @@ public final class APAURA {
                 "  --three-prime-by MODE   gene|read|opposite-read|nearest-end [gene]",
                 "",
                 "Examples:",
-                "  java -jar APAURA.jar sc quantify --sites sites.tsv --alignment sample.bam \\",
+                "  apaura sc quantify --sites sites.tsv --alignment sample.bam \\",
                 "    --sample-id S1 --out S1.counts.tsv",
                 "",
-                "  java -jar APAURA.jar sc quantify --sites sites.tsv --alignment sample.bam \\",
+                "  apaura sc quantify --sites sites.tsv --alignment sample.bam \\",
                 "    --sample-id S1 --gene-tag XF --gene-tag-mode bd-xf --out S1.counts.tsv"
         );
     }
@@ -501,7 +501,7 @@ public final class APAURA {
     private static void printScReferenceHelp() {
         printLines(
                 "Usage:",
-                "  java -jar APAURA.jar sc reference --sites sites.tsv --counts counts.tsv [options] --out DIR",
+                "  apaura sc reference --sites sites.tsv --counts counts.tsv [options] --out DIR",
                 "",
                 "Build grouped single-cell poly(A) site usage reference tables.",
                 "",
@@ -515,7 +515,7 @@ public final class APAURA {
                 "  --group-by COLUMNS      comma-separated grouping columns",
                 "",
                 "Example:",
-                "  java -jar APAURA.jar sc reference --sites sites.tsv --counts counts.tsv \\",
+                "  apaura sc reference --sites sites.tsv --counts counts.tsv \\",
                 "    --cells cells.tsv --group-by cell_type --out reference_results"
         );
     }
@@ -523,7 +523,7 @@ public final class APAURA {
     private static void printScCompareHelp() {
         printLines(
                 "Usage:",
-                "  java -jar APAURA.jar sc compare --sites sites.tsv --samples samples.tsv \\",
+                "  apaura sc compare --sites sites.tsv --samples samples.tsv \\",
                 "    --counts counts.tsv --control NAME --treated NAME --out DIR [options]",
                 "",
                 "Compare single-cell poly(A) site usage between biological conditions.",
@@ -562,7 +562,7 @@ public final class APAURA {
     private static void printScMergeSitesHelp() {
         printLines(
                 "Usage:",
-                "  java -jar APAURA.jar sc merge-sites --inputs a.tsv,b.tsv --out consensus.tsv [options]",
+                "  apaura sc merge-sites --inputs a.tsv,b.tsv --out consensus.tsv [options]",
                 "",
                 "Merge multiple poly(A) site catalogs into a consensus PAS catalog.",
                 "",
@@ -576,7 +576,7 @@ public final class APAURA {
                 "  --min-sources INT       minimum number of supporting sources [1]",
                 "",
                 "Example:",
-                "  java -jar APAURA.jar sc merge-sites --inputs gtf.tsv,scape.tsv \\",
+                "  apaura sc merge-sites --inputs gtf.tsv,scape.tsv \\",
                 "    --sources GTF,SCAPE --cluster-bp 24 --out consensus.tsv"
         );
     }
@@ -584,7 +584,7 @@ public final class APAURA {
     private static void printScGtfSitesHelp() {
         printLines(
                 "Usage:",
-                "  java -jar APAURA.jar sc gtf-sites --annotation annotation.gtf|gff3 --out sites.tsv [options]",
+                "  apaura sc gtf-sites --annotation annotation.gtf|gff3 --out sites.tsv [options]",
                 "",
                 "Build a strand-aware candidate 3' end / poly(A) site catalog",
                 "from transcript annotations.",
@@ -597,14 +597,14 @@ public final class APAURA {
                 "  --cluster-bp INT        cluster nearby annotated transcript ends [24]",
                 "",
                 "Example:",
-                "  java -jar APAURA.jar sc gtf-sites --annotation gencode.gtf --out sites.tsv"
+                "  apaura sc gtf-sites --annotation gencode.gtf --out sites.tsv"
         );
     }
     private static void printPlotRegionHelp() {
 
         printLines(
                 "Usage:",
-                "  java -jar APAURA.jar plot-region [--results DIR] (--gene NAME[,NAME...] | --genes-file FILE | --region chr:start-end) [options]",
+                "  apaura plot-region [--results DIR] (--gene NAME[,NAME...] | --genes-file FILE | --region chr:start-end) [options]",
                 "",
                 "Target:",
                 "  --gene NAME[,NAME...]      gene symbol/Ensembl ID; comma-separated genes allowed",
@@ -650,14 +650,14 @@ public final class APAURA {
                 "",
                 "Examples:",
                 "  # Completed APAURA results",
-                "  java -jar APAURA.jar plot-region --results results --gene HNRNPA2B1",
+                "  apaura plot-region --results results --gene HNRNPA2B1",
                 "",
                 "  # Standalone gene",
-                "  java -jar APAURA.jar plot-region --samples samples.tsv --gtf gencode.gtf \\",
+                "  apaura plot-region --samples samples.tsv --gtf gencode.gtf \\",
                 "    --gene HNRNPA2B1 --control WT --case MUT --library reverse --show-overview",
                 "",
                 "  # Standalone genomic region",
-                "  java -jar APAURA.jar plot-region --samples samples.tsv --gtf gencode.gtf \\",
+                "  apaura plot-region --samples samples.tsv --gtf gencode.gtf \\",
                 "    --region chr7:26170000-26197000 --control WT --case MUT --library reverse"
         );
     }
@@ -668,7 +668,7 @@ public final class APAURA {
 
         printLines(
                 "Usage:",
-                "  java -jar APAURA.jar " + command
+                "  apaura " + command
                         + " --samples samples.tsv --gtf annotation.gtf --out DIR [options]",
                 "",
                 "Required:",
@@ -697,7 +697,7 @@ public final class APAURA {
                 "  --min-tutr-shift FLOAT    TUTR shift threshold [0.10]",
                 "",
                 "Example:",
-                "  java -jar APAURA.jar " + command
+                "  apaura " + command
                         + " --samples samples.tsv --gtf gencode.gtf --out results"
         );
     }
@@ -705,7 +705,7 @@ public final class APAURA {
     private static void printShortReadHelp() {
         printLines(
                 "Usage:",
-                "  java -jar APAURA.jar short-read --samples samples.tsv --gtf annotation.gtf --out DIR [options]",
+                "  apaura short-read --samples samples.tsv --gtf annotation.gtf --out DIR [options]",
                 "",
                 "Required:",
                 "  --samples FILE            sample sheet: sample, condition, bam/file/path",
@@ -740,7 +740,7 @@ public final class APAURA {
                 "  details/                  architecture and mechanism-specific supporting tables",
                 "",
                 "Example:",
-                "  java -jar APAURA.jar short-read --samples samples.tsv --gtf gencode.gtf "
+                "  apaura short-read --samples samples.tsv --gtf gencode.gtf "
                         + "--library unstranded --out short_results"
         );
     }
@@ -748,7 +748,7 @@ public final class APAURA {
     private static void printRbpHelp() {
         printLines(
                 "Usage:",
-                "  java -jar APAURA.jar rbp-enrich --sites apa_sites.tsv --genes apa.tsv "
+                "  apaura rbp-enrich --sites apa_sites.tsv --genes apa.tsv "
                         + "--fasta genome.fa --motifs rbp.meme --out DIR [options]",
                 "",
                 "Required:",
@@ -772,7 +772,7 @@ public final class APAURA {
                 "  --include-no-directional-shift",
                 "",
                 "Example:",
-                "  java -jar APAURA.jar rbp-enrich --sites results/apa_sites.tsv "
+                "  apaura rbp-enrich --sites results/apa_sites.tsv "
                         + "--genes results/apa.tsv --fasta genome.fa --motifs rbp.meme "
                         + "--out rbp_results"
         );
@@ -781,7 +781,7 @@ public final class APAURA {
     private static void printEndsHelp() {
         printLines(
                 "Usage:",
-                "  java -jar APAURA.jar ends --bam sample.bam --out ends.bed [options]",
+                "  apaura ends --bam sample.bam --out ends.bed [options]",
                 "",
                 "Required:",
                 "  --bam FILE                BAM/SAM alignment file",

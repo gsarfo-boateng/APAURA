@@ -129,7 +129,7 @@ public final class IsoQuantEndExtractor {
 
     private static File findCorrectedBed(File path) {
         if (path.isFile()) {
-            return path;
+            return isAppleDouble(path) ? null : path;
         }
 
         File[] children = path.listFiles();
@@ -141,16 +141,18 @@ public final class IsoQuantEndExtractor {
 
         for (File child : children) {
             String name = child.getName();
+            if (isAppleDouble(child)) {
+                continue;
+            }
             if (child.isFile()
-                    && (name.contains("corrected_reads.bed")
-                    || name.endsWith(".corrected_reads.bed")
+                    && (name.endsWith("corrected_reads.bed")
                     || name.endsWith("corrected_reads.bed.gz"))) {
                 return child;
             }
         }
 
         for (File child : children) {
-            if (!child.isDirectory()) {
+            if (!child.isDirectory() || isAppleDouble(child)) {
                 continue;
             }
             File match = findCorrectedBed(child);
@@ -159,5 +161,9 @@ public final class IsoQuantEndExtractor {
             }
         }
         return null;
+    }
+
+    private static boolean isAppleDouble(File file) {
+        return file.getName().startsWith("._");
     }
 }

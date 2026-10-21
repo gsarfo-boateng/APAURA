@@ -7,6 +7,7 @@ import org.apaura.model.ShortReadSite;
 import org.apaura.stats.BetaBinomial;
 import org.apaura.stats.FisherExact;
 import org.apaura.stats.MultipleTesting;
+import org.apaura.stats.ModeratedDirichletMultinomial;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -61,6 +62,33 @@ public final class ShortReadDifferential {
         public double apd = Double.NaN;
         /** Jensen-Shannon divergence between mean control and case cPAU vectors. */
         public double jsd = Double.NaN;
+        /**
+         * Formal TUTR-event p-value. This is computed from the replicate-aware
+         * PAS p-values within the group using a Bonferroni global-null test.
+         */
+        public double eventPvalue = Double.NaN;
+
+        /**
+         * BH-adjusted TUTR-event FDR across all testable TUTR groups.
+         */
+        public double eventFdr = Double.NaN;
+        public double eventPrecision = Double.NaN;
+        public String eventMethod = "not_tested";
+
+        /**
+         * Diagnostic minimum PAS-level p-value within this TUTR group.
+         */
+        public double minSitePvalue = Double.NaN;
+
+        /**
+         * Diagnostic minimum PAS-level FDR within this TUTR group.
+         */
+        public double minSiteFdr = Double.NaN;
+
+        /**
+         * Backward-compatible aliases used by existing APAURA writers.
+         * These now mirror eventPvalue/eventFdr rather than PAS-level minima.
+         */
         public double minPvalue = Double.NaN;
         public double minFdr = Double.NaN;
 
@@ -178,8 +206,19 @@ public final class ShortReadDifferential {
                 results
         );
 
+        applyModeratedDmToGroups(
+                samples,
+                bySample,
+                control,
+                caseCondition,
+                minSampleEvidence,
+                results.groups
+        );
+        applyGroupFdr(results.groups);
+        classifyGroups(results.groups, effect, fdr, wpiThreshold);
+
         results.sites.sort((left, right) -> compareFinite(left.q, right.q));
-        results.groups.sort((left, right) -> compareFinite(left.minFdr, right.minFdr));
+        results.groups.sort((left, right) -> compareFinite(left.eventFdr, right.eventFdr));
         return results;
     }
 
@@ -522,36 +561,195 @@ public final class ShortReadDifferential {
         }
 
         result.status = "ok";
-        boolean statisticallySupported = false;
+        int testedSiteCount = 0;
 
         if (siteResults != null) {
             for (SiteResult site : siteResults) {
-                if (Double.isFinite(site.p)
-                        && (!Double.isFinite(result.minPvalue)
-                        || site.p < result.minPvalue)) {
-                    result.minPvalue = site.p;
+                if ("ok".equals(site.status) && Double.isFinite(site.p)) {
+                    testedSiteCount++;
+
+                    if (!Double.isFinite(result.minSitePvalue)
+                            || site.p < result.minSitePvalue) {
+                        result.minSitePvalue = site.p;
+                    }
                 }
-                if (Double.isFinite(site.q)) {
-                    if (!Double.isFinite(result.minFdr) || site.q < result.minFdr) {
-                        result.minFdr = site.q;
-                    }
-                    if (site.status.equals("ok") && site.q <= fdr) {
-                        statisticallySupported = true;
-                    }
+
+                if (Double.isFinite(site.q)
+                        && (!Double.isFinite(result.minSiteFdr)
+                        || site.q < result.minSiteFdr)) {
+                    result.minSiteFdr = site.q;
                 }
             }
         }
 
-        result.apaChange = statisticallySupported
-                && Double.isFinite(result.apd)
-                && result.apd >= effect;
-        result.apaDirection = ApaUsageMetrics.supportedDirection(
-                result.apaChange,
-                result.deltaWpi,
-                wpiThreshold
-        );
-        result.apaEvent = result.apaArchitecture + ":" + result.apaDirection;
+        if (unreplicated) {
+            if (testedSiteCount == 0 || !Double.isFinite(result.minSitePvalue)) {
+                result.status = "insufficient_evidence";
+                return result;
+            }
+
+            result.eventPvalue = Math.min(
+                    1.0,
+                    result.minSitePvalue * testedSiteCount
+            );
+            result.eventMethod = "bonferroni-min-site-unreplicated";
+            result.minPvalue = result.eventPvalue;
+        }
+
         return result;
+    }
+
+    private static void applyModeratedDmToGroups(
+            List<Sample> samples,
+            Map<String, List<ShortReadQuantification>> bySample,
+            String control,
+            String caseCondition,
+            int minSampleEvidence,
+            List<GroupResult> groups
+    ) {
+        List<ModeratedDirichletMultinomial.Event> events =
+                new ArrayList<ModeratedDirichletMultinomial.Event>();
+        Map<String, GroupResult> byId =
+                new HashMap<String, GroupResult>();
+
+        for (int groupIndex = 0; groupIndex < groups.size(); groupIndex++) {
+            GroupResult result = groups.get(groupIndex);
+            if (!"ok".equals(result.status)) continue;
+
+            boolean unreplicated = result.controlTotalReplicates == 1
+                    && result.caseTotalReplicates == 1;
+            if (unreplicated) continue;
+
+            List<int[]> rows = new ArrayList<int[]>();
+            List<Integer> labels = new ArrayList<Integer>();
+
+            for (Sample sample : samples) {
+                boolean isControl = sample.condition.equals(control);
+                boolean isCase = sample.condition.equals(caseCondition);
+                if (!isControl && !isCase) continue;
+
+                ShortReadQuantification q =
+                        bySample.get(sample.name).get(groupIndex);
+                if (q.commonEvidenceReads < minSampleEvidence) continue;
+
+                rows.add(Arrays.copyOf(q.pseudoCounts, q.pseudoCounts.length));
+                labels.add(isControl ? 0 : 1);
+            }
+
+            if (rows.isEmpty()) continue;
+
+            int[][] counts = new int[rows.size()][];
+            int[] groupLabels = new int[rows.size()];
+            for (int i = 0; i < rows.size(); i++) {
+                counts[i] = rows.get(i);
+                groupLabels[i] = labels.get(i);
+            }
+
+            result.eventPvalue = Double.NaN;
+            result.eventFdr = Double.NaN;
+            result.minPvalue = Double.NaN;
+            result.minFdr = Double.NaN;
+            result.eventMethod = "moderated-DM-LRT";
+
+            events.add(new ModeratedDirichletMultinomial.Event(
+                    result.group.id,
+                    counts,
+                    groupLabels
+            ));
+            byId.put(result.group.id, result);
+        }
+
+        ModeratedDirichletMultinomial.BatchResult batch =
+                ModeratedDirichletMultinomial.test(events);
+
+        for (ModeratedDirichletMultinomial.Result dm : batch.results) {
+            GroupResult result = byId.get(dm.id);
+            if (result == null) continue;
+
+            if (dm.converged && Double.isFinite(dm.pvalue)) {
+                result.eventPvalue = dm.pvalue;
+                result.minPvalue = dm.pvalue;
+                result.eventPrecision = dm.precision;
+            } else {
+                result.status = "dm_fit_failed";
+                result.eventMethod = "moderated-DM-LRT-failed";
+            }
+        }
+    }
+
+    /**
+     * Apply BH correction across testable TUTR-event p-values.
+     *
+     * Untestable groups remain NA and are excluded from the multiple-testing
+     * denominator, matching the behavior of PAS-level FDR correction.
+     */
+    private static void applyGroupFdr(List<GroupResult> groups) {
+        List<Integer> testedIndices = new ArrayList<Integer>();
+        List<Double> testedPValues = new ArrayList<Double>();
+
+        for (int index = 0; index < groups.size(); index++) {
+            double p = groups.get(index).eventPvalue;
+
+            if (Double.isFinite(p)) {
+                testedIndices.add(index);
+                testedPValues.add(p);
+            }
+        }
+
+        if (testedIndices.isEmpty()) {
+            return;
+        }
+
+        double[] pValues = new double[testedPValues.size()];
+
+        for (int index = 0; index < testedPValues.size(); index++) {
+            pValues[index] = testedPValues.get(index);
+        }
+
+        double[] adjusted = MultipleTesting.bh(pValues);
+
+        for (int index = 0; index < testedIndices.size(); index++) {
+            GroupResult result = groups.get(testedIndices.get(index));
+
+            result.eventFdr = adjusted[index];
+
+            // Preserve the historical output field while correcting its meaning.
+            result.minFdr = result.eventFdr;
+        }
+    }
+
+    /**
+     * Classify biological TUTR remodeling only after event-level FDR has been
+     * calculated.
+     */
+    private static void classifyGroups(
+            List<GroupResult> groups,
+            double effect,
+            double fdr,
+            double wpiThreshold
+    ) {
+        for (GroupResult result : groups) {
+            if (!"ok".equals(result.status)) {
+                continue;
+            }
+
+            boolean statisticallySupported =
+                    Double.isFinite(result.eventFdr)
+                    && result.eventFdr <= fdr;
+
+            result.apaChange = statisticallySupported
+                    && Double.isFinite(result.apd)
+                    && result.apd >= effect;
+
+            result.apaDirection = ApaUsageMetrics.supportedDirection(
+                    result.apaChange,
+                    result.deltaWpi,
+                    wpiThreshold
+            );
+
+            result.apaEvent =
+                    result.apaArchitecture + ":" + result.apaDirection;
+        }
     }
 
     private static double weightedPositionIndex(

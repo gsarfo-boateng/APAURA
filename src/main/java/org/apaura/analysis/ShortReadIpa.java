@@ -5,9 +5,9 @@ import org.apaura.model.Interval;
 import org.apaura.model.Sample;
 import org.apaura.model.Strand;
 import org.apaura.model.TranscriptModel;
-import org.apaura.stats.BetaBinomial;
 import org.apaura.stats.FisherExact;
 import org.apaura.stats.MultipleTesting;
+import org.apaura.stats.ModeratedDirichletMultinomial;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -130,6 +130,7 @@ public final class ShortReadIpa {
         public double p = Double.NaN;
         public double q = Double.NaN;
         public double rho = Double.NaN;
+        public double eventPrecision = Double.NaN;
         public String direction = "not_applicable";
         public String method = "not_tested";
         public String status = "insufficient_evidence";
@@ -730,6 +731,14 @@ public final class ShortReadIpa {
             results.sites.add(testEvent(samples, bySample, groupIndex, control, caseCondition,
                     minSampleEvidence, minInformativeReplicates));
         }
+        applyModeratedDmToSites(
+                samples,
+                bySample,
+                control,
+                caseCondition,
+                minSampleEvidence,
+                results.sites
+        );
         applyFdr(results.sites);
         classify(results.sites, minDelta, fdr);
         summarizeGenes(results);
@@ -803,12 +812,83 @@ public final class ShortReadIpa {
             result.status = "insufficient_replicate_support";
             return result;
         }
-        BetaBinomial.TestResult test = BetaBinomial.test(ipaCounts, totals, labels);
-        result.p = test.pvalue;
-        result.rho = test.rho;
-        result.method = "IPA-coverage-beta-binomial-LRT";
+        result.method = "moderated-DM-pending";
         result.status = "ok";
         return result;
+    }
+
+    private static void applyModeratedDmToSites(
+            List<Sample> samples,
+            Map<String, List<Quantification>> bySample,
+            String control,
+            String caseCondition,
+            int minSampleEvidence,
+            List<SiteResult> sites
+    ) {
+        List<ModeratedDirichletMultinomial.Event> events =
+                new ArrayList<ModeratedDirichletMultinomial.Event>();
+        Map<String, SiteResult> byId =
+                new LinkedHashMap<String, SiteResult>();
+
+        for (int groupIndex = 0; groupIndex < sites.size(); groupIndex++) {
+            SiteResult result = sites.get(groupIndex);
+            if (!"ok".equals(result.status)) continue;
+            if (!"moderated-DM-pending".equals(result.method)) continue;
+
+            List<int[]> rows = new ArrayList<int[]>();
+            List<Integer> labels = new ArrayList<Integer>();
+
+            for (Sample sample : samples) {
+                boolean isControl = sample.condition.equals(control);
+                boolean isCase = sample.condition.equals(caseCondition);
+                if (!isControl && !isCase) continue;
+
+                Quantification q = bySample.get(sample.name).get(groupIndex);
+                if (q.totalEvidenceReads < minSampleEvidence) continue;
+
+                rows.add(new int[]{
+                        q.ipaSpecificReads,
+                        q.continuationReads
+                });
+                labels.add(isControl ? 0 : 1);
+            }
+
+            if (rows.isEmpty()) continue;
+
+            int[][] counts = new int[rows.size()][];
+            int[] groupLabels = new int[rows.size()];
+            for (int i = 0; i < rows.size(); i++) {
+                counts[i] = rows.get(i);
+                groupLabels[i] = labels.get(i);
+            }
+
+            result.p = Double.NaN;
+            result.q = Double.NaN;
+            result.method = "moderated-DM-LRT";
+
+            events.add(new ModeratedDirichletMultinomial.Event(
+                    result.group.id,
+                    counts,
+                    groupLabels
+            ));
+            byId.put(result.group.id, result);
+        }
+
+        ModeratedDirichletMultinomial.BatchResult batch =
+                ModeratedDirichletMultinomial.test(events);
+
+        for (ModeratedDirichletMultinomial.Result dm : batch.results) {
+            SiteResult result = byId.get(dm.id);
+            if (result == null) continue;
+
+            if (dm.converged && Double.isFinite(dm.pvalue)) {
+                result.p = dm.pvalue;
+                result.eventPrecision = dm.precision;
+            } else {
+                result.status = "dm_fit_failed";
+                result.method = "moderated-DM-LRT-failed";
+            }
+        }
     }
 
     private static int[] pooledTwoByTwo(int[] successes, int[] totals, int[] labels) {

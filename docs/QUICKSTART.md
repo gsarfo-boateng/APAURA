@@ -3,7 +3,7 @@
 ## Short-read RNA-seq
 
 ```bash
-java -jar APAURA.jar short-read \
+apaura short-read \
   --samples samples.tsv \
   --gtf annotation.gtf \
   --control control \
@@ -15,7 +15,7 @@ java -jar APAURA.jar short-read \
 ## Direct RNA / true 3'-end
 
 ```bash
-java -jar APAURA.jar run-direct \
+apaura run-direct \
   --samples samples.tsv \
   --gtf annotation.gtf \
   --control control \
@@ -26,7 +26,7 @@ java -jar APAURA.jar run-direct \
 ## IsoQuant
 
 ```bash
-java -jar APAURA.jar run-isoquant \
+apaura run-isoquant \
   --samples isoquant_samples.tsv \
   --gtf annotation.gtf \
   --control control \
@@ -37,7 +37,7 @@ java -jar APAURA.jar run-isoquant \
 ## Plot one gene
 
 ```bash
-java -jar APAURA.jar plot-region \
+apaura plot-region \
   --results results \
   --gene CD44 \
   --mode short-read \
@@ -51,7 +51,7 @@ java -jar APAURA.jar plot-region \
 ## Plot many genes
 
 ```bash
-java -jar APAURA.jar plot-region \
+apaura plot-region \
   --results results \
   --gene CD44,SF3B1,TIMP4,TCL1A \
   --mode short-read \
@@ -66,7 +66,7 @@ java -jar APAURA.jar plot-region \
 ## RBP enrichment
 
 ```bash
-java -jar APAURA.jar rbp-enrich \
+apaura rbp-enrich \
   --sites results/apa_sites.tsv \
   --genes results/apa.tsv \
   --fasta genome.fa \
@@ -79,7 +79,7 @@ java -jar APAURA.jar rbp-enrich \
 A completed APAURA result directory is not required for coverage/annotation plotting:
 
 ```bash
-java -jar APAURA.jar plot-region \
+apaura plot-region \
   --samples samples.tsv \
   --gtf annotation.gtf \
   --gene HNRNPA2B1 \
