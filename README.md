@@ -16,11 +16,10 @@ APAURA is a Java toolkit for detecting, quantifying, classifying, and visualizin
                                               apaura plot-region ...
                                               
                                       short-read --------\\
-                                                          >---- APAURA ----> TUTR / ALE / MIXED/ IPA
                                       run-direct  --------//
-                                                          \
-                                      run-isoquant --------//
-                                       sc          --------/
+                                                             >---- APAURA ----> TUTR / ALE / MIXED/ IPA
+                                      run-isoquant --------\\
+                                       sc          --------//
                                       
 
 
