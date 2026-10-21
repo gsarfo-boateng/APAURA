@@ -7,8 +7,71 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 APAURA is a Java toolkit for detecting, quantifying, classifying, and visualizing alternative polyadenylation (APA) from RNA-sequencing data. It supports true 3'-end/direct-RNA evidence, IsoQuant corrected reads, conventional short-read RNA-seq, single-cell APA analysis, RNA-binding-protein motif enrichment, and publication-style locus visualization.
-<img width="1672" height="941" alt="APAURA_Infographics" src="https://github.com/user-attachments/assets/114809f5-754e-42f4-98a3-981b48a50f03" />
-**Version:** `0.10.1`
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                  APAURA                                      │
+│        Alternative Polyadenylation Architecture, Usage & Regulation         │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+                                  RNA DATA
+                                     |
+             //----------------------|----------------------\\
+             |                       |                       |
+             v                       v                       v
+       SHORT-READ RNA-seq       LONG-READ RNA          SINGLE-CELL RNA
+        BAM / CRAM / SAM       dRNA / Iso-Seq          counts + APA sites
+             |                       |                       |
+             |                       |                       |
+             //----------------------|----------------------//
+                                     |
+                                     v
+                         ANNOTATION + APA ARCHITECTURE
+                              GTF / GFF3
+                                     |
+                 //------------------|------------------\\
+                 |                   |                   |
+                 v                   v                   v
+              TUTR                  ALE                 IPA
+        Tandem 3'UTR APA     Alternative last     Intronic poly(A)
+                               exon usage
+                 |                   |                   |
+                 //------------------|------------------//
+                                     |
+                                     v
+                           APA USAGE QUANTIFICATION
+                                     |
+                                     v
+                    REPLICATED DIFFERENTIAL INFERENCE
+                                     |
+                  moderated Dirichlet-multinomial
+                     + BH FDR + effect thresholds
+                                     |
+                                     v
+       //----------------------------------------------------------------\\
+       |                              |                                  |
+       v                              v                                  v
+    apa.tsv                     apa_events.tsv                     apa_sites.tsv
+ gene-level APA              event-level TUTR/ALE/IPA             PAS-level usage
+       |                              |                                  |
+       //----------------------------------------------------------------//
+                                     |
+                                     v
+                         REGULATORY INTERPRETATION
+                                     |
+                //-------------------|-------------------\\
+                |                    |                    |
+                v                    v                    v
+          plot-region            RBP enrichment       APA architecture
+             |                                            |
+             //------------------------|-------------------//
+                                      |
+                                      v
+                              BIOLOGICAL INSIGHT
+apaura short-read ...
+apaura run-direct ...
+apaura run-isoquant ...
+apaura sc ...
+apaura rbp-enrich ...
+apaura plot-region ...
 
 > If you use APAURA, please cite:
 >
