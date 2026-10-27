@@ -1,0 +1,10 @@
+chr1	test	gene	401	600	.	+	.	gene_id "GENE1"; gene_name "GENE1";
+chr1	test	transcript	401	500	.	+	.	gene_id "GENE1"; transcript_id "GENE1_TX1"; gene_name "GENE1";
+chr1	test	exon	401	500	.	+	.	gene_id "GENE1"; transcript_id "GENE1_TX1"; gene_name "GENE1";
+chr1	test	transcript	401	600	.	+	.	gene_id "GENE1"; transcript_id "GENE1_TX2"; gene_name "GENE1";
+chr1	test	exon	401	600	.	+	.	gene_id "GENE1"; transcript_id "GENE1_TX2"; gene_name "GENE1";
+chr2	test	gene	1100	1300	.	-	.	gene_id "GENE2"; gene_name "GENE2";
+chr2	test	transcript	1200	1300	.	-	.	gene_id "GENE2"; transcript_id "GENE2_TX1"; gene_name "GENE2";
+chr2	test	exon	1200	1300	.	-	.	gene_id "GENE2"; transcript_id "GENE2_TX1"; gene_name "GENE2";
+chr2	test	transcript	1100	1300	.	-	.	gene_id "GENE2"; transcript_id "GENE2_TX2"; gene_name "GENE2";
+chr2	test	exon	1100	1300	.	-	.	gene_id "GENE2"; transcript_id "GENE2_TX2"; gene_name "GENE2";

@@ -108,9 +108,10 @@ java -jar APAURA.jar short-read \
 awk -F'\t' '
   NR==1 {for(i=1;i<=NF;i++) c[$i]=i; next}
   $(c["apa_architecture"])=="TUTR" &&
-  $(c["tutr_change"])=="yes" &&
-  $(c["tutr_direction"])=="shortening" &&
-  $(c["changed_mechanisms"])=="TUTR" {ok=1}
+  $(c["apa_change"])=="yes" &&
+  $(c["apa_direction"])=="shortening" &&
+  $(c["changed_mechanisms"])=="TUTR" &&
+  $(c["primary_mechanism"])=="TUTR" {ok=1}
   END {exit !ok}
 ' tests/out_short_sam/apa.tsv
 test -s tests/out_short_sam/apa_events.tsv
@@ -119,8 +120,8 @@ test -s tests/out_short_sam/details/apa_architecture.tsv
 test -s tests/out_short_sam/details/apa_full.tsv
 test -s tests/out_short_sam/details/apa_events_full.tsv
 test -s tests/out_short_sam/details/apa_sites_full.tsv
-! head -1 tests/out_short_sam/apa.tsv | grep -q 'n_tutr_groups'
-head -1 tests/out_short_sam/apa.tsv | grep -q 'min_mechanism_fdr'
+! head -1 tests/out_short_sam/details/apa_full.tsv | grep -q 'n_tutr_groups'
+head -1 tests/out_short_sam/details/apa_full.tsv | grep -q 'min_mechanism_fdr'
 
 # Same engine through the internal BAM parser
 java -jar APAURA.jar short-read \
@@ -134,9 +135,10 @@ java -jar APAURA.jar short-read \
 awk -F'\t' '
   NR==1 {for(i=1;i<=NF;i++) c[$i]=i; next}
   $(c["apa_architecture"])=="TUTR" &&
-  $(c["tutr_change"])=="yes" &&
-  $(c["tutr_direction"])=="shortening" &&
-  $(c["changed_mechanisms"])=="TUTR" {ok=1}
+  $(c["apa_change"])=="yes" &&
+  $(c["apa_direction"])=="shortening" &&
+  $(c["changed_mechanisms"])=="TUTR" &&
+  $(c["primary_mechanism"])=="TUTR" {ok=1}
   END {exit !ok}
 ' tests/out_short_bam/apa.tsv
 cmp tests/out_short_sam/apa.tsv tests/out_short_bam/apa.tsv

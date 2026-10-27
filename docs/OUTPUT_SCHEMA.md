@@ -74,7 +74,6 @@ control_usage
 case_usage
 delta_usage
 effect_size
-effect_metric
 pvalue
 fdr
 direction

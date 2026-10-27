@@ -1,0 +1,21 @@
+APAURA v0.10.1
+Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis
+
+Usage:
+  apaura sc <command> [options]
+
+Single-cell alternative polyadenylation analysis
+
+Commands:
+  gtf-sites      Build candidate poly(A) sites from a GTF/GFF annotation
+  import-sites   Import PAS calls from an external APA caller
+  merge-sites    Merge multiple PAS catalogs into a consensus catalog
+  quantify       Quantify UMI-deduplicated PAS usage
+  reference      Build grouped PAS usage reference tables
+  compare        Compare PAS usage between biological conditions
+
+Run:
+  apaura sc <command> --help
+
+If you use APAURA, please cite:
+Boateng-Sarfo G, Erica Niewold, Sigor S, Wang L. APAURA: Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis. Version 0.10.1, 2026.

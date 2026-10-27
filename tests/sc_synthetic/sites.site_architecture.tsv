@@ -1,0 +1,5 @@
+site_id	gene_id	gene_symbol	chrom	position	strand	pas_rank	n_sites	transcript_support_n	transcript_support	terminal_exon_family_n	terminal_exon_families	n_terminal_exon_families_gene	apa_architecture	architecture_confidence	architecture_mapping
+GENE1_PAS1	GENE1	GENE1	chr1	500	+	1	2	1	GENE1_TX1	1	TE1@chr1:401:+	1	TUTR	HIGH	EXACT_GTF_CLUSTER
+GENE1_PAS2	GENE1	GENE1	chr1	600	+	2	2	1	GENE1_TX2	1	TE1@chr1:401:+	1	TUTR	HIGH	EXACT_GTF_CLUSTER
+GENE2_PAS1	GENE2	GENE2	chr2	1200	-	1	2	1	GENE2_TX1	1	TE1@chr2:1300:-	1	TUTR	HIGH	EXACT_GTF_CLUSTER
+GENE2_PAS2	GENE2	GENE2	chr2	1100	-	2	2	1	GENE2_TX2	1	TE1@chr2:1300:-	1	TUTR	HIGH	EXACT_GTF_CLUSTER
