@@ -84,3 +84,15 @@ dependency-reduced-pom.xml
 # ============================================================
 *.before_*
 /src/PATCH_INSTRUCTIONS.md
+
+# Local native executable
+/apaura
+
+# Local development backups
+/backups/
+
+# Locally assembled release bundles
+/release/
+
+# Private/local analysis runner
+/run_FINAL_LONGREAD_DIRECT_20261022.sh

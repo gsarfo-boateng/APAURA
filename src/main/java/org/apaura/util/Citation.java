@@ -7,7 +7,7 @@ public final class Citation {
     public static final String FULL_NAME =
             "Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis";
     public static final String CITATION =
-            "Boateng-Sarfo G, Sigor S, Wang L. APAURA: "
+            "Boateng-Sarfo G, Erica Niewold, Sigor S, Wang L. APAURA: "
                     + "Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis. "
                     + "Version " + VERSION + ", 2026.";
 

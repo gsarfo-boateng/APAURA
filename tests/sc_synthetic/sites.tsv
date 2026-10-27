@@ -1,0 +1,5 @@
+site_id	gene_id	gene_symbol	chrom	position	strand	sources	source_count	member_sites	annotation_transcript_support
+GENE1_PAS1	GENE1	GENE1	chr1	500	+	GTF_GFF	1	GENE1_PAS1	1
+GENE1_PAS2	GENE1	GENE1	chr1	600	+	GTF_GFF	1	GENE1_PAS2	1
+GENE2_PAS1	GENE2	GENE2	chr2	1200	-	GTF_GFF	1	GENE2_PAS1	1
+GENE2_PAS2	GENE2	GENE2	chr2	1100	-	GTF_GFF	1	GENE2_PAS2	1

@@ -2,6 +2,7 @@ package org.apaura.analysis;
 
 import org.apaura.annotation.TranscriptAnnotation;
 import org.apaura.io.SampleSheet;
+import org.apaura.output.ShortReadCanonicalAdapter;
 import org.apaura.model.CoverageSegment;
 import org.apaura.model.Sample;
 import org.apaura.model.ShortReadGroup;
@@ -275,9 +276,12 @@ public final class ShortReadPipeline {
                         aleDifferential.genes,
                         ipaDifferential.genes
                 );
-        writeIntegratedSummaryCompact(
+        ShortReadCanonicalAdapter.writeApa(
                 new File(outputDirectory, "apa.tsv"),
-                integrated
+                integrated,
+                differential.groups,
+                aleDifferential.genes,
+                ipaDifferential.sites
         );
         if (writeDiagnostics) {
             writeIntegratedSummaryDetailed(
@@ -722,7 +726,7 @@ public final class ShortReadPipeline {
             writer.println(
                     "event_id\tgene_id\tgene_name\tbiotype\tchrom\tstrand\tevent_type\t"
                             + "start_1based\tend_1based\tcontrol_usage\tcase_usage\tdelta_usage\t"
-                            + "effect_size\teffect_metric\tpvalue\tfdr\tdirection\tstatus"
+                            + "effect_size\tpvalue\tfdr\tdirection\tstatus"
             );
 
             for (ShortReadDifferential.GroupResult result : tutrGroups) {
@@ -741,7 +745,7 @@ public final class ShortReadPipeline {
                                 + fmt(result.controlWpi, "%.8f") + "\t"
                                 + fmt(result.caseWpi, "%.8f") + "\t"
                                 + fmt(result.deltaWpi, "%.8f") + "\t"
-                                + fmt(result.apd, "%.8f") + "\tAPD\t"
+                                + fmt(result.apd, "%.8f") + "\t"
                                 + fmt(result.minPvalue, "%.10g") + "\t"
                                 + fmt(result.minFdr, "%.10g") + "\t"
                                 + userDirection(result.apaDirection) + "\t" + result.status
@@ -760,7 +764,7 @@ public final class ShortReadPipeline {
                                 + fmt(result.controlWpi, "%.8f") + "\t"
                                 + fmt(result.caseWpi, "%.8f") + "\t"
                                 + fmt(result.deltaWpi, "%.8f") + "\t"
-                                + fmt(result.switchIndex, "%.8f") + "\tALE_switch_index\t"
+                                + fmt(result.switchIndex, "%.8f") + "\t"
                                 + fmt(result.minPvalue, "%.10g") + "\t"
                                 + fmt(result.minFdr, "%.10g") + "\t"
                                 + userDirection(result.aleDirection) + "\t" + result.status
@@ -777,7 +781,7 @@ public final class ShortReadPipeline {
                                 + fmt(result.caseUsage, "%.8f") + "\t"
                                 + fmt(result.delta, "%.8f") + "\t"
                                 + fmt(Double.isFinite(result.delta) ? Math.abs(result.delta) : Double.NaN, "%.8f")
-                                + "\tabs_delta_IPA_usage\t"
+                                + "\t"
                                 + fmt(result.p, "%.10g") + "\t" + fmt(result.q, "%.10g") + "\t"
                                 + userDirection(result.direction) + "\t" + result.status
                 );
@@ -796,7 +800,7 @@ public final class ShortReadPipeline {
                     "event_id\tgene_id\tgene_name\tbiotype\tchrom\tstrand\tevent_type\tscope\t"
                             + "start_1based\tend_1based\trepresentative_position_1based\t"
                             + "n_sites\tpositions_1based\tcontrol_usage\tcase_usage\tdelta_usage\t"
-                            + "effect_size\teffect_metric\tpvalue\tfdr\tobserved_direction\tdirection\tmethod\tstatus"
+                            + "effect_size\tpvalue\tfdr\tobserved_direction\tdirection\tmethod\tstatus"
             );
 
             for (ShortReadDifferential.GroupResult result : tutrGroups) {
@@ -825,7 +829,6 @@ public final class ShortReadPipeline {
                                 + fmt(result.caseWpi, "%.8f") + "\t"
                                 + fmt(result.deltaWpi, "%.8f") + "\t"
                                 + fmt(result.apd, "%.8f") + "\t"
-                                + "APD\t"
                                 + fmt(result.minPvalue, "%.10g") + "\t"
                                 + fmt(result.minFdr, "%.10g") + "\t"
                                 + result.observedDirection + "\t"
@@ -856,7 +859,6 @@ public final class ShortReadPipeline {
                                 + fmt(result.caseWpi, "%.8f") + "\t"
                                 + fmt(result.deltaWpi, "%.8f") + "\t"
                                 + fmt(result.switchIndex, "%.8f") + "\t"
-                                + "ALE_switch_index\t"
                                 + fmt(result.minPvalue, "%.10g") + "\t"
                                 + fmt(result.minFdr, "%.10g") + "\t"
                                 + result.observedDirection + "\t"
@@ -890,7 +892,6 @@ public final class ShortReadPipeline {
                                 + fmt(result.caseUsage, "%.8f") + "\t"
                                 + fmt(result.delta, "%.8f") + "\t"
                                 + fmt(Double.isFinite(result.delta) ? Math.abs(result.delta) : Double.NaN, "%.8f") + "\t"
-                                + "abs_delta_IPA_usage\t"
                                 + fmt(result.p, "%.10g") + "\t"
                                 + fmt(result.q, "%.10g") + "\t"
                                 + observedIpaDirection(result.delta) + "\t"
@@ -936,49 +937,6 @@ public final class ShortReadPipeline {
                 : Integer.toString(value);
     }
 
-    private static void writeIntegratedSummaryCompact(
-            File file,
-            List<ShortReadIntegratedApa.Result> results
-    ) throws IOException {
-        try (PrintWriter writer = writer(file)) {
-            writer.println(
-                    "gene_id\tgene_name\tbiotype\tchrom\tgene_start_1based\tgene_end_1based\tstrand\t"
-                            + "apa_architecture\tapa_change\tapa_direction\tchanged_mechanisms\t"
-                            + "tutr_change\ttutr_direction\tdelta_tutr_wpi\ttutr_shift_magnitude\ttutr_jsd\ttutr_min_fdr\t"
-                            + "ale_change\tale_direction\tdelta_ale_wpi\tale_switch_index\tale_min_fdr\t"
-                            + "ipa_change\tipa_direction\tdelta_ipa_usage\tipa_min_fdr\t"
-                            + "min_mechanism_fdr\tstatus"
-            );
-            for (ShortReadIntegratedApa.Result result : results) {
-                ArchitectureCatalog.Entry a = result.architecture;
-                writer.println(
-                        a.geneId + "\t" + a.geneName + "\t" + a.biotype + "\t" + a.chrom + "\t"
-                                + a.geneStart1based + "\t" + a.geneEnd1based + "\t" + a.strand.symbol() + "\t"
-                                + a.architectureClass + "\t"
-                                + (result.apaChange ? "yes" : "no") + "\t"
-                                + userDirection(result.apaDirection) + "\t"
-                                + result.changedMechanisms + "\t"
-                                + (result.tutrChange ? "yes" : "no") + "\t"
-                                + userDirection(result.tutrDirection) + "\t"
-                                + fmt(result.tutrDeltaWpi, "%.8f") + "\t"
-                                + fmt(result.tutrShiftMagnitude, "%.8f") + "\t"
-                                + fmt(result.tutrJsd, "%.8f") + "\t"
-                                + fmt(result.tutrMinFdr, "%.10g") + "\t"
-                                + (result.aleChange ? "yes" : "no") + "\t"
-                                + userDirection(result.aleDirection) + "\t"
-                                + fmt(result.aleDeltaWpi, "%.8f") + "\t"
-                                + fmt(result.aleSwitchIndex, "%.8f") + "\t"
-                                + fmt(result.aleMinFdr, "%.10g") + "\t"
-                                + (result.ipaChange ? "yes" : "no") + "\t"
-                                + userDirection(result.ipaDirection) + "\t"
-                                + fmt(result.ipaDeltaUsage, "%.8f") + "\t"
-                                + fmt(result.ipaMinFdr, "%.10g") + "\t"
-                                + fmt(result.minFdr, "%.10g") + "\t"
-                                + result.status
-                );
-            }
-        }
-    }
 
     private static void writeIntegratedSummaryDetailed(
             File file,
