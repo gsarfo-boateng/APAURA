@@ -16,13 +16,7 @@ run_comparison(){
   out="${OUTROOT}/${name}"
   mkdir -p "$out"
 
-  java -jar "$APAURA" short-read \
-    --samples "$samples" \
-    --gtf "$GTF" \
-    --control "$control" \
-    --case "$case" \
-    --library "$LIBRARY" \
-    --out "$out"
+  java -jar "$APAURA" short-read --samples "$samples" --gtf "$GTF" --control "$control" --case "$case" --library "$LIBRARY" --out "$out"
 }
 
 run_comparison "comparison_1" "controlA" "caseA" "comparison_1.samples.tsv"
