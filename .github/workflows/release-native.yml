@@ -1,0 +1,182 @@
+name: Build and release native APAURA binaries
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    name: Test and build portable JAR
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up GraalVM Community JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: graalvm-community
+          java-version: "21"
+          cache: maven
+
+      - name: Show tool versions
+        run: |
+          java --version
+          mvn --version
+          native-image --version
+
+      - name: Full Maven build and tests
+        run: mvn clean package
+
+      - name: Prepare portable JAR
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p release
+          cp target/APAURA.jar "release/APAURA-v${VERSION}.jar"
+          shasum -a 256 "release/APAURA-v${VERSION}.jar" \
+            > "release/APAURA-v${VERSION}.jar.sha256"
+
+      - name: Upload portable JAR artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-jar
+          path: release/
+          if-no-files-found: error
+
+  native:
+    name: Native ${{ matrix.platform }}-${{ matrix.arch }}
+    needs: verify
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            platform: macos
+            arch: arm64
+          - runner: macos-15-intel
+            platform: macos
+            arch: x64
+          - runner: ubuntu-24.04
+            platform: linux
+            arch: x64
+          - runner: ubuntu-24.04-arm
+            platform: linux
+            arch: arm64
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up GraalVM Community JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: graalvm-community
+          java-version: "21"
+          cache: maven
+
+      - name: Install Linux native-image prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential zlib1g-dev
+
+      - name: Show build environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          uname -a
+          java --version
+          mvn --version
+          native-image --version
+
+      - name: Build native executable
+        run: mvn -DskipTests package -Pnative
+
+      - name: Smoke-test native executable
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x target/apaura
+          ./target/apaura version
+          ./target/apaura --help >/dev/null
+          ./target/apaura run-3seq --help >/dev/null
+          ./target/apaura run-direct --help >/dev/null
+          ./target/apaura run-isoquant --help >/dev/null
+          ./target/apaura short-read --help >/dev/null
+
+      - name: Package native executable
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          ASSET="apaura-v${VERSION}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz"
+
+          mkdir -p package
+          cp target/apaura package/apaura
+          chmod 755 package/apaura
+
+          tar -czf "$ASSET" -C package apaura
+          shasum -a 256 "$ASSET" > "${ASSET}.sha256"
+
+          echo "Created:"
+          ls -lh "$ASSET" "${ASSET}.sha256"
+
+      - name: Upload native artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            apaura-v*.tar.gz
+            apaura-v*.tar.gz.sha256
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs:
+      - verify
+      - native
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Download all release artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          path: release
+          merge-multiple: true
+
+      - name: Show release files
+        run: |
+          find release -maxdepth 1 -type f -print | sort
+          echo
+          ls -lh release
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TAG="$GITHUB_REF_NAME"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; uploading/replacing assets."
+            gh release upload "$TAG" release/* --clobber
+          else
+            gh release create "$TAG" \
+              release/* \
+              --title "APAURA ${TAG}" \
+              --generate-notes \
+              --verify-tag
+          fi

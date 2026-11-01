@@ -96,3 +96,4 @@ dependency-reduced-pom.xml
 
 # Private/local analysis runner
 /run_FINAL_LONGREAD_DIRECT_20261022.sh
+backups/
