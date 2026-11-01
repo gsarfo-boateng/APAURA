@@ -11,8 +11,8 @@ APAURA is a Java toolkit for detecting, quantifying, classifying, and visualizin
                                                     ___    ____   ___   _   _  ____    ___
                                                    / _ \  |  _ \ / _ \ | | | ||  _ \  / _ \
                                                   / /_\ \ | |_) / /_\ \| | | || |_) |/ /_\ \
-                                                 /  _  _ \|  __/  _  _ | |_| ||  _ < |  _  |
-                                                 \_/ \_/ /|_|  \_/ \_/  \___/ |_| \_\|_| |_|
+                                                 /  _ _ \ |  __/  _  _ | |_| ||  _ < |  _  |
+                                                 \_/   \_//|_|  \_/ \_/  \___/ |_| \_\|_| |_|
                                                 
                                                 APAURA v0.10.1
                                                 Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis
