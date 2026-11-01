@@ -25,7 +25,7 @@ APAURA is a Java toolkit for detecting, quantifying, classifying, and visualizin
 
 > If you use APAURA, please cite:
 >
-> **Boateng-Sarfo G. APAURA: Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis. Version 0.10.1, 2026.**
+> **Boateng-Sarfo G, E Niewold, Sigor S, Wang L. APAURA: Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis. Version 0.10.1, 2026.**
 
 ---
 
@@ -159,6 +159,46 @@ unstranded
 forward
 reverse
 ```
+
+### Protocol-aware 3′-end sequencing (`run-3seq`)
+
+Use `run-3seq` for aligned 3′-end sequencing libraries in which read-end geometry represents or closely tracks transcript cleavage/polyadenylation sites. This includes workflows such as 3SEQ, PAS-seq, PolyA-seq, 3′READS/3′READS+, PAT-seq, A-seq/A-seq2, SAPAS, QuantSeq, and related assays.
+
+```bash
+java -jar APAURA.jar run-3seq \
+  --samples samples.tsv \
+  --gtf annotation.gtf \
+  --protocol generic \
+  --control control \
+  --case treated \
+  --out results_3seq
+```
+
+Example sample sheet:
+
+```text
+sample	condition	bam
+CTL_1	control	/absolute/path/CTL_1.bam
+CTL_2	control	/absolute/path/CTL_2.bam
+TRT_1	treated	/absolute/path/TRT_1.bam
+TRT_2	treated	/absolute/path/TRT_2.bam
+```
+
+`run-3seq` performs protocol-aware endpoint extraction, PAS clustering and annotation, PAS counting, PAU estimation, TUTR/ALE/IPA interpretation, PAS-level differential testing, and gene-level compositional testing.
+
+For replicated genes with at least two retained PAS and at least two evaluable samples per condition, the primary gene-level test is a **moderated Dirichlet-multinomial likelihood-ratio test**. In the canonical `apa.tsv`:
+
+```text
+pvalue      = gene-level moderated DM p-value
+fdr         = BH-adjusted gene-level DM FDR
+effect_size = APD
+```
+
+`apa_sites.tsv` remains PAS-level and reports PAU, ΔPAU, and beta-binomial statistics.
+
+Current protocol handling is conservative. Protocol presets primarily encode endpoint geometry. Protocol-specific UMI parsing and FASTA-based internal-priming filtering are not yet implemented, and not every named preset has been independently benchmarked.
+
+See [`docs/TUTORIAL_3SEQ.md`](docs/TUTORIAL_3SEQ.md) for the complete workflow.
 
 ### Direct RNA / true 3'-end evidence
 
@@ -688,7 +728,33 @@ ALE and IPA are quantified independently so branch switching and intronic termin
 
 ---
 
+### Gene-level composition in `run-3seq`
+
+For a gene with `K` retained PAS, each biological replicate contributes a count vector:
+
+```text
+C_gs = (C_g1s, C_g2s, ..., C_gKs)
+```
+
+The moderated Dirichlet-multinomial test compares:
+
+```text
+H0: control and case share the same PAS composition
+H1: control and case have different PAS compositions
+```
+
+using:
+
+```text
+LR = 2 × (logLik_full - logLik_null)
+```
+
+Gene-level p-values are corrected with Benjamini-Hochberg FDR. APD measures redistribution magnitude, while WPI and mechanism-specific metrics provide biological direction.
+
 ## Statistical methods
+
+
+- moderated Dirichlet-multinomial likelihood-ratio testing for replicated `run-3seq` gene-level PAS composition;
 
 APAURA uses mechanism-appropriate statistical and effect-size summaries, including:
 
@@ -743,6 +809,9 @@ Synthetic testing verifies implementation against known constructed truth. It do
 
 ## Current boundaries
 
+
+`run-3seq` currently does not perform protocol-specific UMI parsing or FASTA-based internal-priming filtering, and protocol presets beyond validated endpoint geometries should be treated as requiring assay-specific validation.
+
 APAURA v0.10.1 has several intentional boundaries:
 
 - Conventional fragmented RNA-seq endpoints are not treated as direct cleavage-site observations.
@@ -756,6 +825,11 @@ APAURA v0.10.1 has several intentional boundaries:
 ---
 
 ## Help
+
+
+```bash
+java -jar APAURA.jar run-3seq --help
+```
 
 ```bash
 apaura --help
@@ -791,6 +865,27 @@ apaura ends --help
 
 ---
 
+## `run-3seq` output contract
+
+For replicated `run-3seq` analyses, the primary result hierarchy is:
+
+```text
+apa.tsv                  gene-level APA summary
+apa_events.tsv           TUTR/ALE/IPA event interpretation
+apa_sites.tsv            PAS-level PAU/ΔPAU and beta-binomial statistics
+details/three_seq_dm.tsv gene-level moderated DM diagnostics
+```
+
+For evaluable multi-PAS genes, canonical `apa.tsv` reports:
+
+```text
+effect_size = APD
+pvalue      = moderated Dirichlet-multinomial gene-level p-value
+fdr         = BH-adjusted gene-level DM FDR
+```
+
+`apa_sites.tsv` remains PAS-level and should be used to localize the sites contributing to the gene-level compositional change.
+
 ## Citation
 
 ```bash
@@ -799,7 +894,7 @@ apaura --citation
 
 Please cite:
 
-> **Boateng-Sarfo G. APAURA: Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis. Version 0.10.1, 2026.**
+> **Boateng-Sarfo G, E Niewold, Sigor S, Wang L. APAURA: Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis. Version 0.10.1, 2026.**
 
 A machine-readable citation is provided in [`CITATION.cff`](CITATION.cff).
 

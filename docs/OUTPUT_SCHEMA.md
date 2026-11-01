@@ -324,3 +324,74 @@ rbp_run_info.txt
 ```
 
 See `docs/RBP_ENRICHMENT.md`.
+
+## Protocol-aware 3′-end sequencing (`run-3seq`)
+
+`run-3seq` uses the canonical bulk APAURA output contract:
+
+```text
+apa.tsv
+apa_events.tsv
+apa_sites.tsv
+apa_architecture.tsv
+pas_all.bed
+pas.bed
+pas_counts.tsv
+pau.tsv
+run_info.txt
+details/
+```
+
+### Gene-level `apa.tsv`
+
+For an evaluable replicated multi-PAS gene:
+
+```text
+number_sites = number of retained PAS used for the gene-level composition
+effect_size  = APD
+pvalue       = moderated Dirichlet-multinomial gene-level p-value
+fdr          = Benjamini-Hochberg adjusted gene-level DM FDR
+```
+
+A single-PAS gene cannot undergo a PAS compositional redistribution and therefore has unavailable gene-level DM statistics.
+
+### PAS-level `apa_sites.tsv`
+
+`apa_sites.tsv` retains site-level quantities:
+
+```text
+control_pau
+case_pau
+delta_pau
+pvalue
+fdr
+status
+```
+
+For replicated comparisons, PAS-level inference remains beta-binomial. These statistics localize the PAS contributing to a gene-level redistribution and are not substituted for the gene-level DM test.
+
+### `details/three_seq_dm.tsv`
+
+Columns:
+
+```text
+gene_id
+n_sites
+n_control_evaluable
+n_case_evaluable
+pvalue
+fdr
+converged
+common_precision
+status
+```
+
+Common statuses include:
+
+```text
+ok
+insufficient_sites
+insufficient_replicate_support
+```
+
+The current replicated DM implementation requires at least two evaluable control samples and two evaluable case samples for a gene.

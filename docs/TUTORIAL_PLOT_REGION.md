@@ -117,4 +117,4 @@ Do not infer differential APA significance from the standalone coverage plot alo
 
 ## Citation
 
-> Boateng-Sarfo G. APAURA: Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis. Version 0.10.1, 2026.
+> Boateng-Sarfo G, E Niewold, Sigor S, Wang L. APAURA: Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis. Version 0.10.1, 2026.

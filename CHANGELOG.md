@@ -1,5 +1,19 @@
 # Changelog
 
+## [Unreleased]
+
+### Added: protocol-aware 3′-end sequencing
+
+- Added `run-3seq` for aligned 3′-end sequencing datasets with protocol-aware endpoint geometry.
+- Added protocol presets for 3SEQ/PAS-seq/PolyA-seq/3′READS-family/PAT-seq/A-seq-family/SAPAS/QuantSeq and related assay names, with conservative preset semantics.
+- Added replicated gene-level moderated Dirichlet-multinomial likelihood-ratio testing across retained PAS.
+- Added BH-adjusted gene-level DM FDR and APD effect size to canonical `run-3seq` `apa.tsv`.
+- Preserved PAS-level PAU, ΔPAU, and beta-binomial inference in `apa_sites.tsv`.
+- Added `details/three_seq_dm.tsv` for gene-level DM diagnostics.
+- Added synthetic validation for plus- and minus-strand TUTR redistribution, stable PAS usage, and single-PAS non-evaluability.
+- Added `docs/TUTORIAL_3SEQ.md` and synchronized README/help documentation.
+- Protocol-specific UMI parsing and FASTA-based internal-priming filtering remain deferred.
+
 ## [0.10.1] - 2026-10-06
 
 - Added `SINGLE_PAS` and `UNRESOLVED` terminal-architecture states and reconciled terminal exon groups for long-read architecture assignment.

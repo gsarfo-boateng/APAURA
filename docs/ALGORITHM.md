@@ -91,3 +91,47 @@ Positive values indicate relative IPA gain in the case condition; negative value
 ## RBP enrichment
 
 APAURA extracts defined sequence windows around regulated features and scores supplied motifs against foreground/background sequence sets. These outputs are candidate regulatory associations, not direct binding evidence.
+
+## Protocol-aware 3′-end sequencing: gene-level composition
+
+For `run-3seq`, each biological replicate contributes a PAS count vector for gene `g`:
+
+```text
+C_gs = (C_g1s, C_g2s, ..., C_gKs)
+```
+
+where `K` is the number of retained PAS.
+
+The replicated gene-level null and alternative are:
+
+```text
+H0: control and case share the same PAS composition
+H1: control and case have different PAS compositions
+```
+
+APAURA fits a moderated Dirichlet-multinomial model and compares the full and null models with:
+
+```text
+LR = 2 × (logLik_full - logLik_null)
+```
+
+The test has `K - 1` compositional degrees of freedom in the corresponding unmoderated two-group formulation. The moderated implementation estimates a common precision across testable genes to stabilize gene-level inference.
+
+Gene-level p-values are adjusted across evaluable `run-3seq` genes using Benjamini-Hochberg FDR.
+
+The statistical hierarchy is:
+
+```text
+gene level   moderated Dirichlet-multinomial LRT + BH FDR
+site level   beta-binomial PAS testing + BH FDR
+magnitude    APD / mechanism-specific effect sizes
+direction    WPI / ALE / IPA transcript-aware metrics
+```
+
+APD is:
+
+```text
+APD = 0.5 × sum_k |PAU_case,k - PAU_control,k|
+```
+
+For TUTR events, positive ΔWPI denotes distal movement/lengthening and negative ΔWPI denotes proximal movement/shortening. PAS order is transcript-aware, including minus-strand genes.

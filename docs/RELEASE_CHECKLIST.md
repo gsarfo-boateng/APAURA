@@ -80,3 +80,20 @@ Rscript -e 'parse(file="src/main/resources/org/apaura/plot/APAURA_region_plot.R"
 - [ ] Attach final `APAURA.jar`.
 - [ ] Attach checksums if distributed.
 - [ ] Publish release notes.
+
+## `run-3seq` release checks
+
+- [ ] `java -jar APAURA.jar run-3seq --help` succeeds.
+- [ ] Protocol list in CLI help matches `ProtocolRegistry`.
+- [ ] `generic` synthetic endpoint geometry passes.
+- [ ] `quantseq-rev` synthetic endpoint geometry passes.
+- [ ] Plus-strand TUTR synthetic gene is significant with the expected direction.
+- [ ] Minus-strand TUTR synthetic gene is significant with transcript-aware direction.
+- [ ] Stable synthetic gene remains non-significant.
+- [ ] Single-PAS synthetic gene is reported as `insufficient_sites`.
+- [ ] `apa.tsv` uses gene-level moderated DM p-value/FDR and APD for evaluable `run-3seq` genes.
+- [ ] `apa_sites.tsv` retains PAS-level beta-binomial inference.
+- [ ] `details/three_seq_dm.tsv` is written and contains convergence/precision diagnostics.
+- [ ] README, `docs/TUTORIAL_3SEQ.md`, QUICKSTART, OUTPUT_SCHEMA, ALGORITHM, and VALIDATION agree.
+- [ ] Internal-priming and UMI limitations are stated explicitly.
+- [ ] Full `mvn clean package` succeeds before release.

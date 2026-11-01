@@ -94,3 +94,54 @@ apaura plot-region \
 Standalone mode visualizes BAM/SAM coverage and GTF-derived terminal structure. It does not perform differential APA testing and therefore does not make ΔPAU, TUTR, ALE, IPA, or formal APA-architecture calls without completed APAURA results.
 
 See `docs/TUTORIAL_PLOT_REGION.md`.
+
+## Protocol-aware 3′-end sequencing (`run-3seq`)
+
+Prepare a tab-separated sample sheet:
+
+```text
+sample	condition	bam
+WT_1	WT	/absolute/path/WT_1.bam
+WT_2	WT	/absolute/path/WT_2.bam
+KO_1	KO	/absolute/path/KO_1.bam
+KO_2	KO	/absolute/path/KO_2.bam
+```
+
+Run:
+
+```bash
+java -jar APAURA.jar run-3seq \
+  --samples /absolute/path/samples.tsv \
+  --gtf /absolute/path/annotation.gtf \
+  --protocol generic \
+  --control WT \
+  --case KO \
+  --out /absolute/path/APAURA_3SEQ_WT_vs_KO
+```
+
+For reverse-oriented QuantSeq geometry:
+
+```bash
+java -jar APAURA.jar run-3seq \
+  --samples /absolute/path/samples.tsv \
+  --gtf /absolute/path/annotation.gtf \
+  --protocol quantseq-rev \
+  --control WT \
+  --case KO \
+  --out /absolute/path/APAURA_QuantSeq_WT_vs_KO
+```
+
+Primary outputs:
+
+```text
+apa.tsv
+apa_events.tsv
+apa_sites.tsv
+details/three_seq_dm.tsv
+```
+
+For replicated multi-PAS genes, `apa.tsv` uses the moderated Dirichlet-multinomial gene-level p-value, BH FDR, and APD effect size. `apa_sites.tsv` retains PAS-level PAU, ΔPAU, and beta-binomial statistics.
+
+See `docs/TUTORIAL_3SEQ.md` for the full tutorial.
+
+Current boundaries: protocol-specific UMI parsing and FASTA-based internal-priming filtering are not yet implemented.

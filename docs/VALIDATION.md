@@ -207,3 +207,45 @@ confirm:
 - PAS/IPA coordinates match result tables;
 - cache hits are reused where expected;
 - multi-gene plotting writes one plot per target.
+
+## `run-3seq` validation
+
+The protocol-aware 3′-end implementation was validated with a synthetic truth set containing four genes:
+
+```text
+SYN_TUTR   plus-strand proximal-to-distal redistribution
+SYN_MINUS  minus-strand transcript-aware redistribution
+SYN_IP     stable two-PAS composition containing an internal-priming challenge site
+SYN_UMI    single-PAS/UMI challenge gene
+```
+
+Both `generic` and `quantseq-rev` endpoint geometries recovered the same biological PAS coordinates and the expected biological direction.
+
+Observed gene-level moderated DM behavior in the validated synthetic run:
+
+```text
+SYN_TUTR   significant, lengthening
+SYN_MINUS  significant, lengthening
+SYN_IP     non-significant/stable
+SYN_UMI    insufficient_sites
+```
+
+Representative generic-run DM values:
+
+```text
+SYN_TUTR   p=1.629810052e-18   FDR=4.889430155e-18
+SYN_MINUS  p=8.099195928e-17   FDR=1.214879389e-16
+SYN_IP     p=0.9999513010      FDR=0.9999513010
+```
+
+The full Maven regression build after `run-3seq` integration completed with:
+
+```text
+64 tests
+0 failures
+0 errors
+0 skipped
+BUILD SUCCESS
+```
+
+The synthetic internal-priming and UMI cases intentionally document current boundaries: the candidate internal-priming PAS remains present until FASTA-based filtering is implemented, and protocol-specific UMI-aware deduplication remains deferred.
