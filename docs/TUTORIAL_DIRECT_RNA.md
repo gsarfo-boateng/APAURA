@@ -15,12 +15,7 @@ T2\ttreated\t/path/T2.bam
 ## Run
 
 ```bash
-apaura run-direct \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --control control \
-  --case treated \
-  --out direct_results
+apaura run-direct --samples samples.tsv --gtf annotation.gtf --control control --case treated --out direct_results
 ```
 
 Use:
