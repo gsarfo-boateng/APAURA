@@ -157,11 +157,11 @@ replicates.
 For retained terminal PAS:
 
 ```text
-one resolved terminal group + one PAS      -> SINGLE_PAS
-one resolved terminal group + >=2 PAS      -> TUTR
-multiple groups + one PAS per group        -> ALE
+one resolved terminal group + one PAS -> SINGLE_PAS
+one resolved terminal group + >=2 PAS -> TUTR
+multiple groups + one PAS per group -> ALE
 multiple groups + tandem PAS in any group  -> mixed
-unassigned retained terminal PAS           -> UNRESOLVED
+unassigned retained terminal PAS -> UNRESOLVED
 ```
 
 IPA remains a separate termination mechanism.
@@ -172,9 +172,9 @@ A mechanism can enter `changed_mechanisms` only when both its effect threshold
 and mechanism-specific statistical support are satisfied.
 
 ```text
-TUTR          -> significant TUTR or ALE+TUTR site/event support
-ALE           -> significant ALE or ALE+TUTR site/event support
-IPA           -> significant IPA support
+TUTR -> significant TUTR or ALE+TUTR site/event support
+ALE -> significant ALE or ALE+TUTR site/event support
+IPA -> significant IPA support
 internal_exon -> significant internal_exon support
 ```
 
@@ -194,6 +194,7 @@ java -jar target/APAURA.jar short-read --help
 java -jar target/APAURA.jar sc --help
 java -jar target/APAURA.jar plot-region --help
 java -jar target/APAURA.jar rbp-enrich --help
+java -jar target/APAURA.jar run-3seq --help
 ```
 
 ## Plot regression
@@ -213,10 +214,10 @@ confirm:
 The protocol-aware 3′-end implementation was validated with a synthetic truth set containing four genes:
 
 ```text
-SYN_TUTR   plus-strand proximal-to-distal redistribution
+SYN_TUTR plus-strand proximal-to-distal redistribution
 SYN_MINUS  minus-strand transcript-aware redistribution
-SYN_IP     stable two-PAS composition containing an internal-priming challenge site
-SYN_UMI    single-PAS/UMI challenge gene
+SYN_IP stable two-PAS composition containing an internal-priming challenge site
+SYN_UMI single-PAS/UMI challenge gene
 ```
 
 Both `generic` and `quantseq-rev` endpoint geometries recovered the same biological PAS coordinates and the expected biological direction.
@@ -224,10 +225,10 @@ Both `generic` and `quantseq-rev` endpoint geometries recovered the same biologi
 Observed gene-level moderated DM behavior in the validated synthetic run:
 
 ```text
-SYN_TUTR   significant, lengthening
-SYN_MINUS  significant, lengthening
-SYN_IP     non-significant/stable
-SYN_UMI    insufficient_sites
+SYN_TUTR significant, lengthening
+SYN_MINUS significant, lengthening
+SYN_IP  non-significant/stable
+SYN_UMI insufficient_sites
 ```
 
 Representative generic-run DM values:
@@ -235,7 +236,7 @@ Representative generic-run DM values:
 ```text
 SYN_TUTR   p=1.629810052e-18   FDR=4.889430155e-18
 SYN_MINUS  p=8.099195928e-17   FDR=1.214879389e-16
-SYN_IP     p=0.9999513010      FDR=0.9999513010
+SYN_IP   p=0.9999513010  FDR=0.9999513010
 ```
 
 The full Maven regression build after `run-3seq` integration completed with:
