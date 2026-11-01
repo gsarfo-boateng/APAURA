@@ -15,12 +15,7 @@ T2\ttreated\t/path/T2_isoquant
 ## Run
 
 ```bash
-apaura run-isoquant \
-  --samples isoquant_samples.tsv \
-  --gtf annotation.gtf \
-  --control control \
-  --case treated \
-  --out isoquant_results
+apaura run-isoquant --samples isoquant_samples.tsv --gtf annotation.gtf --control control --case treated --out isoquant_results
 ```
 
 IsoQuant mode shares the direct/long-read APA framework. Use:
