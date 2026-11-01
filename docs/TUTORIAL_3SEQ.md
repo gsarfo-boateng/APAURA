@@ -86,13 +86,7 @@ Not yet implemented:
 ## 4. Run APAURA
 
 ```bash
-java -jar APAURA.jar run-3seq \
-  --samples /absolute/path/samples.tsv \
-  --gtf /absolute/path/annotation.gtf \
-  --protocol generic \
-  --control WT \
-  --case KO \
-  --out /absolute/path/APAURA_3SEQ_WT_vs_KO
+java -jar APAURA.jar run-3seq --samples /absolute/path/samples.tsv --gtf /absolute/path/annotation.gtf --protocol generic --control WT --case KO --out /absolute/path/APAURA_3SEQ_WT_vs_KO
 ```
 
 Useful options:
@@ -238,8 +232,8 @@ details/three_seq_dm.tsv
 Primary gene-level table:
 
 ```text
-pvalue      = moderated DM gene-level p-value
-fdr         = BH-adjusted DM FDR
+pvalue = moderated DM gene-level p-value
+fdr = BH-adjusted DM FDR
 effect_size = APD
 ```
 
