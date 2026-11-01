@@ -15,18 +15,7 @@ apaura plot-region --help
 ## Completed-results mode
 
 ```bash
-apaura plot-region \
-  --results results \
-  --gene HNRNPA2B1 \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --control U1_WT \
-  --case U1_MUT \
-  --library reverse \
-  --show-replicates \
-  --show-overview \
-  --format pdf \
-  --out plots/HNRNPA2B1
+apaura plot-region --results results --gene ABCDEF --samples samples.tsv --gtf annotation.gtf --control U1_WT --case U1_MUT --library reverse --show-replicates --show-overview --format pdf --out plots/HNRNPA2B1
 ```
 
 Depending on the analysis and locus, APAURA can display mean normalized coverage, replicate coverage, whole-gene overview, terminal-region zoom, tested PAS/ΔPAU, TUTR direction, IPA usage, ALE branch usage, and terminal architecture.
@@ -36,17 +25,7 @@ Depending on the analysis and locus, APAURA can display mean normalized coverage
 `--results` is optional.
 
 ```bash
-apaura plot-region \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --gene HNRNPA2B1 \
-  --control U1_WT \
-  --case U1_MUT \
-  --library reverse \
-  --show-replicates \
-  --show-overview \
-  --format pdf \
-  --out plots/HNRNPA2B1
+apaura plot-region --samples samples.tsv --gtf annotation.gtf --gene ABDCEF --control U1_WT --case U1_MUT --library reverse --show-replicates --show-overview --format pdf --out plots/HNRNPA2B1
 ```
 
 Standalone mode displays coverage and annotation-derived terminal structure. It **does not run differential APA analysis** and therefore intentionally does not claim ΔPAU, significant TUTR shortening/lengthening, ALE switching, IPA gain/loss, or formal TUTR/ALE/mixed architecture when completed APAURA results are absent.
@@ -54,16 +33,7 @@ Standalone mode displays coverage and annotation-derived terminal structure. It 
 ## Multiple genes
 
 ```bash
-apaura plot-region \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --gene HNRNPA2B1,PLA2G12A,TMEM254 \
-  --control U1_WT \
-  --case U1_MUT \
-  --library reverse \
-  --show-overview \
-  --format pdf \
-  --out plots
+apaura plot-region --samples samples.tsv --gtf annotation.gtf --gene HNRNPA2B1,PLA2G12A,TMEM254 --control U1_WT --case U1_MUT --library reverse --show-overview --format pdf --out plots
 ```
 
 Or use `--genes-file genes.txt`.
@@ -71,15 +41,7 @@ Or use `--genes-file genes.txt`.
 ## Genomic region
 
 ```bash
-apaura plot-region \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --region chr7:26170000-26197000 \
-  --control U1_WT \
-  --case U1_MUT \
-  --library reverse \
-  --format pdf \
-  --out plots/chr7_region
+apaura plot-region --samples samples.tsv --gtf annotation.gtf --region chr7:26170000-26197000 --control U1_WT --case U1_MUT --library reverse --format pdf --out plots/chr7_region
 ```
 
 Standalone region plotting currently uses the supplied GTF for annotation/terminal-structure context.
