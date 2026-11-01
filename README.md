@@ -18,14 +18,8 @@ APAURA is a Java toolkit for detecting, quantifying, classifying, and visualizin
                                                 Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis
                                                 
                                                 modes:
-                                                  run-3seq | run-direct | run-isoquant | short-read | sc3utr
+                                                  run-3seq | run-direct | run-isoquant | short-read | sc
                                                   plot-region | rbp-enrich | ends
-                                      
-
-
-> If you use APAURA, please cite:
->
-> **Boateng-Sarfo G, E Niewold, Sigor S, Wang L. APAURA: Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis. Version 0.10.1, 2026.**
 
 ---
 
