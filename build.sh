@@ -9,9 +9,7 @@ echo "Building APAURA..."
 rm -rf build
 mkdir -p build
 
-# ============================================================
 # Standard build: Maven
-# ============================================================
 
 if command -v mvn >/dev/null 2>&1; then
     mvn clean package
@@ -23,9 +21,7 @@ if command -v mvn >/dev/null 2>&1; then
 
     cp target/APAURA.jar build/APAURA.jar
 
-# ============================================================
 # Fallback build: javac + jar
-# ============================================================
 
 else
     command -v javac >/dev/null 2>&1 || {
@@ -56,9 +52,8 @@ else
     jar cfe build/APAURA.jar org.apaura.APAURA -C build/classes .
 fi
 
-# ============================================================
+
 # Create APAURA command-line launcher
-# ============================================================
 
 cat > apaura <<'LAUNCHER'
 #!/usr/bin/env bash
@@ -94,9 +89,7 @@ chmod +x apaura
 rm -f APAURA.jar
 
 echo
-echo "============================================"
 echo " APAURA build complete"
-echo "============================================"
 echo
 echo "Executable:"
 echo "  $ROOT/apaura"
