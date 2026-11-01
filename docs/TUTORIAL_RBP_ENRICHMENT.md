@@ -12,12 +12,7 @@ RBP motifs in MEME format
 ## Run
 
 ```bash
-apaura rbp-enrich \
-  --sites results/apa_sites.tsv \
-  --genes results/apa.tsv \
-  --fasta genome.fa \
-  --motifs rbp_motifs.meme \
-  --out rbp_results
+apaura rbp-enrich --sites results/apa_sites.tsv --genes results/apa.tsv --fasta genome.fa --motifs rbp_motifs.meme --out rbp_results
 ```
 
 Common options:
