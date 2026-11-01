@@ -130,9 +130,12 @@ public final class LongReadCanonicalAdapter {
         info.put("apaura_version", Citation.VERSION);
         info.put(
                 "mode",
-                "isoquant".equalsIgnoreCase(inputFormat)
-                        ? "run-isoquant"
-                        : "run-direct"
+                inputFormat != null
+                        && inputFormat.toLowerCase(Locale.ROOT).startsWith("3seq:")
+                        ? "run-3seq"
+                        : ("isoquant".equalsIgnoreCase(inputFormat)
+                                ? "run-isoquant"
+                                : "run-direct")
         );
         info.put("input_format", inputFormat);
         info.put("sample_sheet", sampleSheet);
@@ -183,13 +186,19 @@ public final class LongReadCanonicalAdapter {
         );
         info.put(
                 "apa_summary_pvalue",
-                "minimum tested PAS p-value within primary_mechanism; "
-                        + "NA when primary_mechanism=none"
+                inputFormat != null
+                        && inputFormat.toLowerCase(Locale.ROOT).startsWith("3seq:")
+                        ? "gene-level moderated Dirichlet-multinomial likelihood-ratio p-value"
+                        : "minimum tested PAS p-value within primary_mechanism; "
+                                + "NA when primary_mechanism=none"
         );
         info.put(
                 "apa_summary_fdr",
-                "minimum BH-adjusted PAS FDR within primary_mechanism; "
-                        + "NA when primary_mechanism=none"
+                inputFormat != null
+                        && inputFormat.toLowerCase(Locale.ROOT).startsWith("3seq:")
+                        ? "Benjamini-Hochberg FDR across gene-level moderated Dirichlet-multinomial tests"
+                        : "minimum BH-adjusted PAS FDR within primary_mechanism; "
+                                + "NA when primary_mechanism=none"
         );
         info.put(
                 "details_gene_effect_size",
@@ -253,7 +262,14 @@ public final class LongReadCanonicalAdapter {
         row.put("changed_mechanisms", gene.changedMechanisms);
         row.put("primary_mechanism", primary);
 
-        if ("none".equals(primary)) {
+        // RUN3SEQ_CANONICAL_DM
+        if (Double.isFinite(gene.compositionPvalue)
+                && Double.isFinite(gene.compositionFdr)) {
+            row.put("number_sites", Integer.toString(gene.nSites));
+            row.put("effect_size", fmt(gene.apd));
+            row.put("pvalue", fmt(gene.compositionPvalue));
+            row.put("fdr", fmt(gene.compositionFdr));
+        } else if ("none".equals(primary)) {
             row.put("number_sites", "NA");
             row.put("effect_size", "NA");
             row.put("pvalue", "NA");

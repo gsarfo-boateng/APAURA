@@ -2,6 +2,8 @@ package org.apaura;
 
 import org.apaura.analysis.DirectApaPipeline;
 import org.apaura.analysis.EndExtractor;
+import org.apaura.analysis.ProtocolRegistry;
+import org.apaura.analysis.ProtocolSpec;
 import org.apaura.analysis.ShortReadPipeline;
 import org.apaura.model.EndKey;
 import org.apaura.rbp.RbpEnrichment;
@@ -175,6 +177,10 @@ public final class APAURA {
                 runDirect(args, "bam");
                 return;
 
+            case "run-3seq":
+                run3Seq(args);
+                return;
+
             case "run-isoquant":
                 runDirect(args, "isoquant");
                 return;
@@ -224,6 +230,24 @@ public final class APAURA {
                 );
             }
         }
+    }
+
+    private static void run3Seq(Args args) throws Exception {
+        String protocolName = args.get("protocol", "generic");
+        ProtocolSpec protocol = ProtocolRegistry.get(protocolName);
+
+        System.err.println(
+                "[APAURA] run-3seq protocol=" + protocol.name
+                        + " boundary=" + protocol.boundary
+                        + " flip_alignment_strand=" + protocol.flipAlignmentStrand
+                        + " internal_priming_recommended="
+                        + protocol.internalPrimingRecommended
+        );
+
+        runDirect(
+                args,
+                "3seq:" + protocol.name
+        );
     }
 
     private static void runDirect(Args args, String defaultInputFormat) throws Exception {
@@ -317,7 +341,11 @@ public final class APAURA {
         switch (command) {
             case "run-direct":
                 printDirectHelp(false);
+                return;            case "run-3seq":
+                printRun3SeqHelp();
                 return;
+
+
             case "run-isoquant":
                 printDirectHelp(true);
                 return;
@@ -358,6 +386,7 @@ public final class APAURA {
                 "Commands:",
                 "  ends          Extract single-base transcript-oriented 3' aligned ends",
                 "  run-direct    Direct RNA / true 3'-end differential APA + architecture",
+                "  run-3seq     Protocol-aware 3'-end sequencing differential APA",
                 "  run-isoquant  IsoQuant corrected-read differential APA",
                 "  short-read    Conventional RNA-seq coverage-based TUTR/ALE/IPA analysis",
                 "  run-short     Alias for short-read",
@@ -775,6 +804,55 @@ public final class APAURA {
                 "  apaura rbp-enrich --sites results/apa_sites.tsv "
                         + "--genes results/apa.tsv --fasta genome.fa --motifs rbp.meme "
                         + "--out rbp_results"
+        );
+    }
+
+    private static void printRun3SeqHelp() {
+        printLines(
+                "Usage:",
+                "  apaura run-3seq --samples samples.tsv --gtf annotation.gtf --out DIR [options]",
+                "",
+                "Required:",
+                "  --samples FILE            sample sheet: sample, condition, bam/file/path",
+                "  --gtf FILE                GTF/GTF.GZ annotation",
+                "  --out DIR                 output directory",
+                "",
+                "3'-seq protocol:",
+                "  --protocol NAME           protocol preset [generic]",
+                "                            3seq, 3p-seq, pas-seq, polyaseq, 3reads,",
+                "                            3reads+, pat-seq, a-seq, a-seq2, sapas,",
+                "                            3t-fill, paperclip, 2p-seq, pa-seq,",
+                "                            wtts-seq, maps, 3pc, exprss,",
+                "                            quantseq-fwd, quantseq-rev,",
+                "                            quantseq-ffpe, generic",
+                "",
+                "Options:",
+                "  --control NAME            control condition [control]",
+                "  --case NAME               case condition [treated]",
+                "  --cluster-distance INT    PAS clustering distance [20]",
+                "  --cluster-representative mode|median [mode]",
+                "  --min-gene-reads INT      pooled reads per condition [10]",
+                "  --min-site-reads INT      pooled PAS reads [5]",
+                "  --min-pau FLOAT           minimum pooled PAS usage [0.01]",
+                "  --min-mapq INT            minimum mapping quality [10]",
+                "  --keep-duplicates         retain duplicate-marked reads",
+                "  --strand-mode MODE        alignment strand mode [alignment]",
+                "  --annotation-slop INT     downstream annotation window [1000]",
+                "  --min-delta-pau FLOAT     PAS/branch usage effect threshold [0.10]",
+                "  --min-ale-switch FLOAT    minimum ALE branch switch [0.10]",
+                "  --fdr FLOAT               FDR threshold [0.05]",
+                "  --wpi-threshold FLOAT     shortening/lengthening threshold [0.10]",
+                "  --min-internal-exon-delta FLOAT [0.10]",
+                "  --min-ipa-delta FLOAT     IPA gain/loss threshold [0.10]",
+                "  --min-tutr-shift FLOAT    TUTR shift threshold [0.10]",
+                "",
+                "Note:",
+                "  This first implementation adds protocol-aware endpoint geometry.",
+                "  Protocol-specific UMI parsing and FASTA-based internal-priming",
+                "  filtering will be added separately.",
+                "",
+                "Example:",
+                "  apaura run-3seq --samples samples.tsv --gtf gencode.gtf --protocol quantseq-rev --out results"
         );
     }
 

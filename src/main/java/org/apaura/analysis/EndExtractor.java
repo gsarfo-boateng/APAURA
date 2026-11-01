@@ -24,6 +24,23 @@ public final class EndExtractor {
             boolean keepDuplicates,
             String strandMode
     ) throws IOException {
+        return extract(
+                path,
+                minMapq,
+                keepDuplicates,
+                strandMode,
+                ProtocolRegistry.get("generic")
+        );
+    }
+
+    // APAURA_RUN_3SEQ_PROTOCOL_OVERLOAD
+    public static Map<EndKey, Integer> extract(
+            String path,
+            int minMapq,
+            boolean keepDuplicates,
+            String strandMode,
+            ProtocolSpec protocol
+    ) throws IOException {
         Map<EndKey, Integer> counts = new HashMap<EndKey, Integer>();
         long alignmentsSeen = 0;
         long endsRetained = 0;
@@ -37,13 +54,28 @@ public final class EndExtractor {
                     continue;
                 }
 
+                Strand alignmentStrand =
+                        Strand.fromFlag(alignment.isNegative());
+
+                if (protocol.flipAlignmentStrand) {
+                    alignmentStrand = alignmentStrand.flip();
+                }
+
                 Strand strand = applyStrandMode(
-                        Strand.fromFlag(alignment.isNegative()),
+                        alignmentStrand,
                         strandMode
                 );
-                int position0 = strand == Strand.MINUS
-                        ? alignment.pos0
-                        : alignment.end0Exclusive() - 1;
+
+                int position0;
+                if (protocol.boundary == ProtocolSpec.Boundary.ALIGNMENT_5P) {
+                    position0 = alignment.isNegative()
+                            ? alignment.end0Exclusive() - 1
+                            : alignment.pos0;
+                } else {
+                    position0 = strand == Strand.MINUS
+                            ? alignment.pos0
+                            : alignment.end0Exclusive() - 1;
+                }
 
                 if (position0 < 0) {
                     continue;
@@ -59,10 +91,12 @@ public final class EndExtractor {
         System.err.println(
                 "[APAURA] " + new File(path).getName()
                         + ": scanned=" + alignmentsSeen
+                        + " protocol=" + protocol.name
                         + " retained_3p_ends=" + endsRetained
                         + " unique_positions=" + counts.size()
         );
         return counts;
+    
     }
 
     private static boolean isUsable(

@@ -69,6 +69,14 @@ public final class DifferentialApa {
         public double apd;
         /** Jensen-Shannon divergence between mean control and case PAU vectors. */
         public double usageJsd;
+
+        /**
+         * Optional gene-level compositional test used by protocol-aware 3'-seq.
+         * These fields remain NA/not_tested for run-direct and run-isoquant.
+         */
+        public double compositionPvalue = Double.NaN;
+        public double compositionFdr = Double.NaN;
+        public String compositionMethod = "not_tested";
         public double minFdr;
         /** Minimum site FDR among sites that belong to the resolved TUTR mechanism. */
         public double tutrMinFdr = 1.0;

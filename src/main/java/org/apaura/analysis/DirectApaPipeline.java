@@ -194,7 +194,46 @@ public final class DirectApaPipeline {
                 tutrThreshold
         );
 
-        writeSiteDiff(new File(detailsDirectory, "apa_sites.tsv"), differential.sites);
+        
+        // APAURA_RUN_3SEQ_DM_GATE
+        if (inputFormat != null
+                && inputFormat.toLowerCase(Locale.ROOT).startsWith("3seq:")) {
+
+            ThreeSeqGeneDifferential.Batch threeSeqDm =
+                    ThreeSeqGeneDifferential.test(
+                            samples,
+                            retainedSites,
+                            control,
+                            caseCondition
+                    );
+
+            ThreeSeqGeneDifferential.applyGate(
+                    differential.genes,
+                    threeSeqDm,
+                    fdr
+            );
+
+            File threeSeqDmFile =
+                    new File(
+                            new File(outputDirectory, "details"),
+                            "three_seq_dm.tsv"
+                    );
+
+            ThreeSeqGeneDifferential.write(
+                    threeSeqDmFile,
+                    threeSeqDm
+            );
+
+            System.err.println(
+                    "[APAURA] run-3seq gene-level moderated DM: "
+                            + "common_precision="
+                            + threeSeqDm.commonPrecision
+                            + " output="
+                            + threeSeqDmFile.getAbsolutePath()
+            );
+        }
+
+writeSiteDiff(new File(detailsDirectory, "apa_sites.tsv"), differential.sites);
         writeGene(new File(detailsDirectory, "apa.tsv"), differential.genes);
         writeArchitecture(
                 new File(detailsDirectory, "apa_architecture.tsv"),
@@ -288,6 +327,22 @@ public final class DirectApaPipeline {
             Map<EndKey, Integer> sampleEnds;
             if ("isoquant".equalsIgnoreCase(inputFormat)) {
                 sampleEnds = IsoQuantEndExtractor.extract(sample.path, strandMode);
+            } else if (
+                    inputFormat != null
+                            && inputFormat.toLowerCase(Locale.ROOT).startsWith("3seq:")
+            ) {
+                // APAURA_RUN_3SEQ_EXTRACT
+                String protocolName = inputFormat.substring("3seq:".length());
+                ProtocolSpec protocol = ProtocolRegistry.get(protocolName);
+
+                sampleEnds = EndExtractor.extract(
+                        sample.path,
+                        minMapq,
+                        keepDuplicates,
+                        strandMode,
+                        protocol
+                );
+
             } else {
                 sampleEnds = EndExtractor.extract(
                         sample.path,
