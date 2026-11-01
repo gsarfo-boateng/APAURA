@@ -40,6 +40,57 @@ candidate RBP regulators
 
 APAURA separates **terminal APA architecture** from **the mechanism that changes between conditions**. This allows tandem 3' UTR APA (TUTR), alternative last exon usage (ALE), and intronic polyadenylation (IPA) to be represented without collapsing distinct biological processes into one proximal/distal score.
 
+## Installation
+
+APAURA is distributed as precompiled native executables for macOS
+and Linux, as well as a portable Java JAR.
+
+### macOS Apple Silicon
+
+Download:
+
+apaura-v0.10.1-macos-arm64.tar.gz
+
+Then:
+
+tar -xzf apaura-v0.10.1-macos-arm64.tar.gz
+chmod +x apaura
+./apaura --help
+
+### macOS Intel
+
+Download:
+
+apaura-v0.10.1-macos-x64.tar.gz
+
+tar -xzf apaura-v0.10.1-macos-x64.tar.gz
+chmod +x apaura
+./apaura --help
+
+### Linux x86-64
+
+Download:
+
+apaura-v0.10.1-linux-x64.tar.gz
+
+tar -xzf apaura-v0.10.1-linux-x64.tar.gz
+chmod +x apaura
+./apaura --help
+
+### Linux ARM64
+
+Download:
+
+apaura-v0.10.1-linux-arm64.tar.gz
+
+tar -xzf apaura-v0.10.1-linux-arm64.tar.gz
+chmod +x apaura
+./apaura --help
+
+### Java JAR
+
+java -jar APAURA-v0.10.1.jar --help
+
 ### Terminal APA architecture
 
 | Architecture | Interpretation |
