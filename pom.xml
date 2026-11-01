@@ -8,9 +8,6 @@
 
   <modelVersion>4.0.0</modelVersion>
 
-  <!-- =========================================================
-       Project metadata
-       ========================================================= -->
 
   <groupId>org.apaura</groupId>
   <artifactId>apaura</artifactId>
@@ -22,9 +19,6 @@
     Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis
   </description>
 
-  <!-- =========================================================
-       Build properties
-       ========================================================= -->
 
   <properties>
 
@@ -58,10 +52,6 @@
 
   </properties>
 
-  <!-- =========================================================
-       Dependencies
-       ========================================================= -->
-
   <dependencies>
 
     <dependency>
@@ -73,20 +63,12 @@
 
   </dependencies>
 
-  <!-- =========================================================
-       Standard JVM build
-       ========================================================= -->
-
   <build>
 
     <!-- Produces target/APAURA.jar -->
     <finalName>APAURA</finalName>
 
     <plugins>
-
-      <!-- =====================================================
-           Java compilation
-           ===================================================== -->
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -112,9 +94,6 @@
         </configuration>
       </plugin>
 
-      <!-- =====================================================
-           JUnit test execution
-           ===================================================== -->
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -138,9 +117,6 @@
         </configuration>
       </plugin>
 
-      <!-- =====================================================
-           Remove macOS AppleDouble metadata from compiled output
-           ===================================================== -->
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -187,9 +163,6 @@
 
       </plugin>
 
-      <!-- =====================================================
-           Executable JAR
-           ===================================================== -->
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -227,15 +200,9 @@
 
   </build>
 
-  <!-- =========================================================
-       Build profiles
-       ========================================================= -->
 
   <profiles>
 
-    <!-- =======================================================
-         GraalVM native executable
-         ======================================================= -->
 
     <profile>
 
