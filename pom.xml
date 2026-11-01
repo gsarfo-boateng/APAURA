@@ -1,152 +1,320 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="
+           http://maven.apache.org/POM/4.0.0
+           https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
+
+  <!-- =========================================================
+       Project metadata
+       ========================================================= -->
 
   <groupId>org.apaura</groupId>
   <artifactId>apaura</artifactId>
   <version>0.10.1</version>
 
   <name>APAURA</name>
-  <description>Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis</description>
+
+  <description>
+    Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis
+  </description>
+
+  <!-- =========================================================
+       Build properties
+       ========================================================= -->
 
   <properties>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
+
+    <!--
+      APAURA targets Java 8 bytecode/API compatibility.
+
+      Using maven.compiler.release=8 is preferred when building
+      with modern JDKs because it prevents accidental use of APIs
+      introduced after Java 8.
+    -->
+    <maven.compiler.release>8</maven.compiler.release>
+
+    <!--
+      Retain source/target explicitly for compatibility with
+      environments where the release property may not be used.
+    -->
+    <maven.compiler.source>8</maven.compiler.source>
+    <maven.compiler.target>8</maven.compiler.target>
+
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <!-- Test framework -->
     <junit.version>5.11.4</junit.version>
+
+    <!--
+      Native Build Tools version currently validated for APAURA
+      macOS ARM64/x64 and Linux ARM64/x64 release builds.
+    -->
     <native.maven.plugin.version>1.1.14</native.maven.plugin.version>
+
   </properties>
 
+  <!-- =========================================================
+       Dependencies
+       ========================================================= -->
+
   <dependencies>
+
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
       <version>${junit.version}</version>
       <scope>test</scope>
     </dependency>
+
   </dependencies>
 
+  <!-- =========================================================
+       Standard JVM build
+       ========================================================= -->
+
   <build>
+
+    <!-- Produces target/APAURA.jar -->
     <finalName>APAURA</finalName>
 
     <plugins>
 
+      <!-- =====================================================
+           Java compilation
+           ===================================================== -->
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.11.0</version>
+        <version>3.16.0</version>
+
         <configuration>
-          <source>1.8</source>
-          <target>1.8</target>
+
+          <!--
+            Compile against the Java 8 API surface even when
+            Maven is running under JDK 17, 21, or newer.
+          -->
+          <release>8</release>
+
+          <source>8</source>
+          <target>8</target>
+
           <encoding>UTF-8</encoding>
+
+          <!-- Show compiler warnings without treating them as errors -->
+          <showWarnings>true</showWarnings>
+
         </configuration>
       </plugin>
+
+      <!-- =====================================================
+           JUnit test execution
+           ===================================================== -->
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.2.5</version>
+
         <configuration>
+
+          <!-- APAURA is not a Java module project -->
           <useModulePath>false</useModulePath>
+
+          <!--
+            Ignore AppleDouble files that macOS may create on
+            external or non-APFS volumes.
+          -->
           <excludes>
-            <!-- macOS AppleDouble sidecars on external/non-APFS volumes -->
             <exclude>**/._*.java</exclude>
             <exclude>%regex[.*[.]_.*Test.*.class]</exclude>
           </excludes>
+
         </configuration>
       </plugin>
+
+      <!-- =====================================================
+           Remove macOS AppleDouble metadata from compiled output
+           ===================================================== -->
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
         <version>3.1.0</version>
+
         <executions>
+
           <execution>
+
             <id>remove-macos-appledouble</id>
+
             <phase>process-test-classes</phase>
+
             <goals>
               <goal>run</goal>
             </goals>
+
             <configuration>
+
               <target>
-                <delete includeemptydirs="true" failonerror="false">
+
+                <delete
+                  includeemptydirs="true"
+                  failonerror="false">
+
                   <fileset dir="${project.build.outputDirectory}">
                     <include name="**/._*"/>
                   </fileset>
+
                   <fileset dir="${project.build.testOutputDirectory}">
                     <include name="**/._*"/>
                   </fileset>
+
                 </delete>
+
               </target>
+
             </configuration>
+
           </execution>
+
         </executions>
+
       </plugin>
+
+      <!-- =====================================================
+           Executable JAR
+           ===================================================== -->
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <version>3.3.0</version>
+
         <configuration>
+
+          <!-- Never package macOS AppleDouble metadata -->
           <excludes>
-            <!-- Never package macOS AppleDouble metadata -->
             <exclude>**/._*</exclude>
           </excludes>
+
           <archive>
+
             <manifest>
+
+              <!--
+                Allows:
+                  java -jar target/APAURA.jar
+              -->
               <mainClass>org.apaura.APAURA</mainClass>
+
+              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+
             </manifest>
+
           </archive>
+
         </configuration>
+
       </plugin>
 
     </plugins>
+
   </build>
+
+  <!-- =========================================================
+       Build profiles
+       ========================================================= -->
 
   <profiles>
 
+    <!-- =======================================================
+         GraalVM native executable
+         ======================================================= -->
+
     <profile>
+
       <id>native</id>
 
       <build>
+
         <plugins>
 
           <plugin>
+
             <groupId>org.graalvm.buildtools</groupId>
             <artifactId>native-maven-plugin</artifactId>
             <version>${native.maven.plugin.version}</version>
+
+            <!--
+              Required by GraalVM Native Build Tools integration.
+            -->
             <extensions>true</extensions>
 
             <executions>
+
               <execution>
+
                 <id>build-native</id>
+
+                <!--
+                  Running:
+                    mvn package -Pnative
+
+                  produces:
+                    target/apaura
+                -->
                 <phase>package</phase>
+
                 <goals>
                   <goal>compile-no-fork</goal>
                 </goals>
+
               </execution>
+
             </executions>
 
             <configuration>
+
+              <!-- APAURA CLI entry point -->
               <mainClass>org.apaura.APAURA</mainClass>
+
+              <!-- Native executable name -->
               <imageName>apaura</imageName>
+
+              <!--
+                Fail if a true native executable cannot be built.
+                Do not silently produce a JVM fallback image.
+              -->
               <fallback>false</fallback>
 
+              <!--
+                APAURA currently does not depend on external
+                reachability metadata.
+              -->
               <metadataRepository>
                 <enabled>false</enabled>
               </metadataRepository>
 
+              <!--
+                Produce portable native binaries instead of
+                optimizing for the exact CPU used during build.
+              -->
               <buildArgs>
                 <buildArg>-march=compatibility</buildArg>
               </buildArgs>
+
             </configuration>
 
           </plugin>
 
         </plugins>
+
       </build>
 
     </profile>
