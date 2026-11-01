@@ -8,18 +8,17 @@
 
 APAURA is a Java toolkit for detecting, quantifying, classifying, and visualizing alternative polyadenylation (APA) from RNA-sequencing data. It supports true 3'-end/direct-RNA evidence, IsoQuant corrected reads, conventional short-read RNA-seq, single-cell APA analysis, RNA-binding-protein motif enrichment, and publication-style locus visualization.
 
-                                                        ___    ____   ___   _   _  ____    ___
-                                                       / _ \  |  _ \ / _ \ | | | ||  _ \  / _ \
-                                                      / /_\ \ | |_) / /_\ \| | | || |_) |/ /_\ \
-                                                     /  _  _ \|  __/  _  _ | |_| ||  _ < |  _  |
-                                                     \_/ \_/ /|_|  \_/ \_/  \___/ |_| \_\|_| |_|
+                                               ___    ____   ___   _   _  ____    ___
+                                              / _ \  |  _ \ / _ \ | | | ||  _ \  / _ \
+                                             / /_\ \ | |_) / /_\ \| | | || |_) |/ /_\ \
+                                            /  _  _ \|  __/  _  _ | |_| ||  _ < |  _  |
+                                            \_/ \_/ /|_|  \_/ \_/  \___/ |_| \_\|_| |_|
                                                 
-                                                APAURA v0.10.1
-                                                Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis
+                                            APAURA v0.10.1
+                                           Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis
                                                 
-                                                modes:
-                                                  run-3seq | run-direct | run-isoquant | short-read | sc
-                                                  plot-region | rbp-enrich | ends
+                                            modes: run-3seq | run-direct | run-isoquant | short-read | sc
+                                            plot-region | rbp-enrich | ends
 
 ---
 
