@@ -70,13 +70,53 @@ Mechanism-specific columns such as `tutr_direction`, `ale_direction`, and `ipa_d
 
 | Task | Input | APAURA command |
 |---|---|---|
-| True 3'-end / direct RNA APA | BAM/SAM + GTF | `run-direct` |
+| Protocol-aware 3′-end sequencing APA | Aligned BAM/SAM + GTF | `run-3seq` |
+| Direct RNA / true 3′-end APA | BAM/SAM + GTF | `run-direct` |
 | IsoQuant long-read APA | IsoQuant corrected reads + GTF | `run-isoquant` |
-| Conventional RNA-seq APA | BAM/SAM + GTF | `short-read` |
-| Single-cell APA | Single-cell alignments + PAS reference + cell metadata | `sc` |
-| Publication locus plots | APAURA results or BAM/SAM + GTF | `plot-region` |
-| RBP motif enrichment | APAURA APA results + FASTA + MEME motifs | `rbp-enrich` |
+| Conventional short-read RNA-seq APA | BAM/SAM + GTF | `short-read` |
+| Single-cell APA | Single-cell alignments + PAS reference + sample/cell metadata | `sc` |
+| Publication-quality locus visualization | APAURA results or BAM/SAM + GTF | `plot-region` |
+| RBP motif enrichment | APAURA APA results + genome FASTA + MEME motifs | `rbp-enrich` |
 | Transcript-end extraction | BAM/SAM | `ends` |
+
+### `run-3seq` supported protocol presets
+
+`run-3seq` provides a unified interface for protocol-aware 3′-end sequencing analysis rather than requiring a separate APAURA command for every experimental protocol.
+
+Current presets include:
+
+```text
+3seq
+3p-seq
+pas-seq
+polyaseq
+3reads
+3reads+
+pat-seq
+a-seq
+a-seq2
+sapas
+3t-fill
+paperclip
+2p-seq
+pa-seq
+wtts-seq
+maps
+3pc
+exprss
+quantseq-fwd
+quantseq-rev
+quantseq-ffpe
+generic
+```
+
+Example:
+
+```bash
+java -jar APAURA.jar run-3seq --samples samples.tsv --gtf annotation.gtf --protocol quantseq-rev --control control --case treated --out results
+```
+
+Protocol presets currently define protocol-aware endpoint geometry. Protocol-specific UMI parsing and FASTA-based internal-priming filtering are not yet implemented.
 
 ---
 
@@ -159,13 +199,7 @@ reverse
 Use `run-3seq` for aligned 3′-end sequencing libraries in which read-end geometry represents or closely tracks transcript cleavage/polyadenylation sites. This includes workflows such as 3SEQ, PAS-seq, PolyA-seq, 3′READS/3′READS+, PAT-seq, A-seq/A-seq2, SAPAS, QuantSeq, and related assays.
 
 ```bash
-java -jar APAURA.jar run-3seq \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --protocol generic \
-  --control control \
-  --case treated \
-  --out results_3seq
+java -jar APAURA.jar run-3seq --samples samples.tsv --gtf annotation.gtf --protocol generic --control control --case treated --out results_3seq
 ```
 
 Example sample sheet:
@@ -183,8 +217,8 @@ TRT_2	treated	/absolute/path/TRT_2.bam
 For replicated genes with at least two retained PAS and at least two evaluable samples per condition, the primary gene-level test is a **moderated Dirichlet-multinomial likelihood-ratio test**. In the canonical `apa.tsv`:
 
 ```text
-pvalue      = gene-level moderated DM p-value
-fdr         = BH-adjusted gene-level DM FDR
+pvalue = gene-level moderated DM p-value
+fdr = BH-adjusted gene-level DM FDR
 effect_size = APD
 ```
 
@@ -864,9 +898,9 @@ apaura ends --help
 For replicated `run-3seq` analyses, the primary result hierarchy is:
 
 ```text
-apa.tsv                  gene-level APA summary
-apa_events.tsv           TUTR/ALE/IPA event interpretation
-apa_sites.tsv            PAS-level PAU/ΔPAU and beta-binomial statistics
+apa.tsv gene-level APA summary
+apa_events.tsv TUTR/ALE/IPA event interpretation
+apa_sites.tsv PAS-level PAU/ΔPAU and beta-binomial statistics
 details/three_seq_dm.tsv gene-level moderated DM diagnostics
 ```
 
@@ -874,8 +908,8 @@ For evaluable multi-PAS genes, canonical `apa.tsv` reports:
 
 ```text
 effect_size = APD
-pvalue      = moderated Dirichlet-multinomial gene-level p-value
-fdr         = BH-adjusted gene-level DM FDR
+pvalue = moderated Dirichlet-multinomial gene-level p-value
+fdr = BH-adjusted gene-level DM FDR
 ```
 
 `apa_sites.tsv` remains PAS-level and should be used to localize the sites contributing to the gene-level compositional change.
