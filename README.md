@@ -10,8 +10,8 @@ APAURA is a command-line toolkit for detecting, quantifying, classifying, and vi
 
 APAURA supports:
 
-- protocol-aware 3′-end sequencing;
-- direct RNA / true 3′-end sequencing;
+- protocol-aware 3'-end sequencing;
+- direct RNA / true 3'-end sequencing;
 - IsoQuant long-read corrected reads;
 - conventional short-read RNA-seq;
 - single-cell APA analysis;
@@ -383,8 +383,8 @@ apaura plot-region --help
 
 | Task | Input | APAURA command |
 |---|---|---|
-| Protocol-aware 3′-end sequencing APA | Aligned BAM/SAM + GTF | `run-3seq` |
-| Direct RNA / true 3′-end APA | BAM/SAM + GTF | `run-direct` |
+| Protocol-aware 3'-end sequencing APA | Aligned BAM/SAM + GTF | `run-3seq` |
+| Direct RNA / true 3'-end APA | BAM/SAM + GTF | `run-direct` |
 | IsoQuant long-read APA | IsoQuant corrected reads + GTF | `run-isoquant` |
 | Conventional short-read RNA-seq APA | BAM/SAM + GTF | `short-read` |
 | Single-cell APA | Single-cell alignments + PAS reference + metadata | `sc` |
@@ -412,7 +412,7 @@ candidate regulatory mechanisms
 
 APAURA separates **terminal APA architecture** from the **APA mechanism that changes between biological conditions**.
 
-This allows tandem 3′ UTR APA, alternative last exon usage, and intronic polyadenylation to remain biologically distinct rather than being collapsed into a single proximal-versus-distal score.
+This allows tandem 3' UTR APA, alternative last exon usage, and intronic polyadenylation to remain biologically distinct rather than being collapsed into a single proximal-versus-distal score.
 
 ### Terminal APA architecture
 
@@ -443,7 +443,7 @@ Mechanism-specific fields such as `tutr_direction`, `ale_direction`, and `ipa_di
 
 # Analysis modes
 
-## 1. Protocol-aware 3′-end sequencing
+## 1. Protocol-aware 3'-end sequencing
 
 Use `run-3seq` for aligned libraries in which read-end geometry represents or closely tracks transcript cleavage/polyadenylation sites.
 
@@ -454,8 +454,8 @@ Examples include:
 3P-seq
 PAS-seq
 PolyA-seq
-3′READS
-3′READS+
+3'READS
+3'READS+
 PAT-seq
 A-seq
 A-seq2
@@ -572,8 +572,8 @@ In canonical `apa.tsv`:
 
 ```text
 effect_size = APD
-pvalue      = moderated Dirichlet-multinomial gene-level p-value
-fdr         = BH-adjusted gene-level DM FDR
+pvalue = moderated Dirichlet-multinomial gene-level p-value
+fdr = BH-adjusted gene-level DM FDR
 ```
 
 `apa_sites.tsv` remains PAS-level and contains PAU, ΔPAU, and PAS-level statistics.
@@ -592,9 +592,9 @@ See:
 
 ---
 
-## 2. Direct RNA / true 3′-end analysis
+## 2. Direct RNA / true 3'-end analysis
 
-Use `run-direct` when aligned read ends represent true or direct transcript 3′ ends.
+Use `run-direct` when aligned read ends represent true or direct transcript 3' ends.
 
 Example:
 
@@ -780,7 +780,7 @@ Possible PAS sources include:
 ```text
 annotation-derived transcript ends
 +
-3′-end sequencing
+3'-end sequencing
 +
 direct RNA sequencing
 +
@@ -1060,7 +1060,7 @@ details/
 
 ---
 
-## Direct RNA / 3′-end / IsoQuant supporting outputs
+## Direct RNA / 3'-end / IsoQuant supporting outputs
 
 Depending on mode, supporting files can include:
 
@@ -1162,8 +1162,8 @@ For evaluable multi-PAS genes, canonical `apa.tsv` reports:
 
 ```text
 effect_size = APD
-pvalue      = moderated Dirichlet-multinomial gene-level p-value
-fdr         = BH-adjusted gene-level DM FDR
+pvalue = moderated Dirichlet-multinomial gene-level p-value
+fdr = BH-adjusted gene-level DM FDR
 ```
 
 Use `apa_sites.tsv` to identify the individual PAS contributing to a gene-level compositional change.
@@ -1187,7 +1187,7 @@ bash tests/run_tests.sh
 APAURA v0.10.1 includes synthetic regression coverage for:
 
 - SAM and BAM reading;
-- true 3′-end/direct-RNA analysis;
+- true 3'-end/direct-RNA analysis;
 - protocol-aware `run-3seq`;
 - IsoQuant input;
 - short-read TUTR;
@@ -1220,7 +1220,7 @@ APAURA v0.10.1 has several intentional boundaries:
 - short-read analysis is annotation-guided rather than a general de novo PAS breakpoint-discovery engine;
 - `run-3seq` does not currently perform protocol-specific UMI parsing;
 - `run-3seq` does not currently provide a complete FASTA-based internal-priming filtering framework;
-- not every named 3′-end protocol preset has been independently benchmarked;
+- not every named 3'-end protocol preset has been independently benchmarked;
 - standalone `plot-region` is a visualization mode and does not perform differential APA testing;
 - standalone locus plotting requires GTF annotation to resolve transcript structure;
 - RBP motif enrichment reports candidate sequence associations rather than direct binding or causality;
