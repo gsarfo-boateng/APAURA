@@ -34,13 +34,7 @@ Accepted path column names include `bam`, `file`, and `path`.
 ## Run
 
 ```bash
-apaura short-read \
-  --samples samples.tsv \
-  --gtf annotation.gtf \
-  --control WT \
-  --case MUT \
-  --library reverse \
-  --out apaura_short
+apaura short-read --samples samples.tsv --gtf annotation.gtf --control WT --case MUT --library reverse --out apaura_short
 ```
 
 ## Important options
