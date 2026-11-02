@@ -4,7 +4,7 @@
 
 [![Version](https://img.shields.io/badge/version-0.10.1-blue.svg)](#citation)
 [![Java](https://img.shields.io/badge/Java-8%2B-orange.svg)](#portable-java-jar)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](LICENSE)
 
 APAURA is a command-line toolkit for detecting, quantifying, classifying, and visualizing **alternative polyadenylation (APA)** from multiple RNA-sequencing data types.
 
@@ -1275,3 +1275,22 @@ APAURA is distributed under the MIT License.
 See:
 
 [`LICENSE`](LICENSE)
+
+---
+
+## License
+
+APAURA source code on the current development branch is distributed under the **GNU General Public License v3.0 only (GPL-3.0-only)**.
+
+You may use, study, modify, and redistribute APAURA under the terms of GPLv3. Distributed modified or derivative versions must comply with the GPLv3 source-code and licensing requirements.
+
+See [`LICENSE`](LICENSE).
+
+### Licensing history
+
+The previously published **APAURA v0.10.1** release was originally distributed under the MIT License. Rights already granted under that release remain governed by those terms.
+
+Current development and future distributions from this branch are licensed under **GPL-3.0-only**.
+
+Copyright © 2026 George Boateng-Sarfo
+

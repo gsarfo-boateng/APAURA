@@ -1,7 +1,7 @@
-# Notice
+# APAURA Notice
 
-APAURA is distributed under the MIT License. See `LICENSE`.
+Copyright © 2026 George Boateng-Sarfo
 
-The RBP module accepts generic MEME-format motif matrices. No third-party motif database is bundled with APAURA; users should obtain motif collections under the applicable terms and cite the original motif resource when appropriate.
+Current APAURA development and future distributions from the main branch are licensed under the GNU General Public License v3.0 only (GPL-3.0-only). See `LICENSE`.
 
-Additional implementation and method-positioning notes are available under `docs/`.
+The previously published APAURA v0.10.1 release was originally distributed under the MIT License. Rights already granted under that release remain governed by those terms.
