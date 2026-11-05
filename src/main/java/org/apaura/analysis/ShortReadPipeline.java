@@ -50,25 +50,106 @@ public final class ShortReadPipeline {
             double minAleSwitch,
             double minIpaDelta,
             double fdr,
-            double wpiThreshold
+            double wpiThreshold,
+            boolean discoverNovelPas,
+            int novelPasWindow,
+            double novelPasMinDepth,
+            double novelPasMinDrop,
+            int novelPasMinReplicates,
+            int novelPasClusterDistance
     ) throws Exception {
         File outputDirectory = ensureOutputDirectory(outDir);
         File detailsDirectory = new File(outputDirectory, "details");
-        if (writeDiagnostics || writePerSample) {
+        if (writeDiagnostics || writePerSample || discoverNovelPas) {
             detailsDirectory = ensureSubdirectory(outputDirectory, "details");
         }
         List<Sample> samples = SampleSheet.read(sampleSheet);
         validateConditions(samples, control, caseCondition);
 
-        TranscriptAnnotation annotation = TranscriptAnnotation.load(gtf);
-        List<ArchitectureCatalog.Entry> architectureEntries = ArchitectureCatalog.build(
-                annotation.transcripts(),
-                anchorTolerance,
-                pasMergeDistance
-        );
+        TranscriptAnnotation annotation =
+                TranscriptAnnotation.load(gtf);
+
+        Map<String, List<Integer>> novelPasByFamily =
+                Collections.<String, List<Integer>>emptyMap();
+
+        int acceptedNovelPas = 0;
+
+        if (discoverNovelPas) {
+
+            System.err.println(
+                    "[APAURA] novel TUTR PAS discovery=enabled"
+                            + " method=coverage_breakpoint"
+                            + " condition_blind=true"
+            );
+
+            ShortReadNovelPasCollector.Result discovery =
+                    ShortReadNovelPasCollector.discover(
+                            samples,
+                            annotation.transcripts(),
+                            anchorTolerance,
+                            pasMergeDistance,
+                            minMapq,
+                            keepDuplicates,
+                            library,
+                            novelPasWindow,
+                            novelPasMinDepth,
+                            novelPasMinDrop,
+                            novelPasMinReplicates,
+                            novelPasClusterDistance,
+                            minSegmentLength
+                    );
+
+            novelPasByFamily =
+                    discovery.acceptedByFamily;
+
+            for (List<Integer> positions
+                    : novelPasByFamily.values()) {
+                acceptedNovelPas += positions.size();
+            }
+
+            ShortReadNovelPasCollector.writeDiagnostics(
+                    new File(
+                            detailsDirectory,
+                            "novel_pas_candidates.tsv"
+                    ),
+                    discovery
+            );
+
+            System.err.println(
+                    "[APAURA] coverage-supported novel PAS accepted="
+                            + acceptedNovelPas
+                            + " candidate_rows="
+                            + discovery.sites.size()
+            );
+
+        } else {
+
+            Files.deleteIfExists(
+                    new File(
+                            detailsDirectory,
+                            "novel_pas_candidates.tsv"
+                    ).toPath()
+            );
+
+            System.err.println(
+                    "[APAURA] novel TUTR PAS discovery=disabled"
+            );
+        }
+
+        List<ArchitectureCatalog.Entry> architectureEntries =
+                ArchitectureCatalog.build(
+                        annotation.transcripts(),
+                        anchorTolerance,
+                        pasMergeDistance,
+                        novelPasByFamily
+                );
+
         if (writeDiagnostics) {
             writeArchitectureCatalog(
-                    new File(detailsDirectory, "apa_architecture.tsv"),
+                    new File(
+                            detailsDirectory,
+                            "apa_architecture.tsv"
+                    ),
                     architectureEntries
             );
         }
@@ -78,7 +159,8 @@ public final class ShortReadPipeline {
                         annotation.transcripts(),
                         anchorTolerance,
                         pasMergeDistance,
-                        minSegmentLength
+                        minSegmentLength,
+                        novelPasByFamily
                 );
         List<ShortReadGroup> groups = buildResult.groups;
         List<ShortReadAle.Group> aleGroups = ShortReadAle.build(
@@ -98,7 +180,7 @@ public final class ShortReadPipeline {
 
         if (groups.isEmpty() && aleGroups.isEmpty() && ipaGroups.isEmpty()) {
             throw new IllegalArgumentException(
-                    "No quantifiable terminal APA or IPA events were built from the GTF. "
+                    "No quantifiable terminal APA or IPA events were built from the annotation/discovery catalog. "
                             + "Try lowering --min-segment-length, inspect --ipa-window, "
                             + "or inspect the annotation."
             );
@@ -114,7 +196,12 @@ public final class ShortReadPipeline {
                         + " skipped_nonquantifiable="
                         + buildResult.skippedNonQuantifiableFamilies
         );
-        System.err.println("[APAURA] annotated tandem APA groups=" + groups.size());
+        System.err.println(
+                "[APAURA] tandem APA groups="
+                        + groups.size()
+                        + " accepted_novel_pas="
+                        + acceptedNovelPas
+        );
         System.err.println("[APAURA] annotated ALE genes=" + aleGroups.size());
         if (writeDiagnostics) {
             writeGroups(new File(detailsDirectory, "pas.tsv"), groups);
@@ -293,8 +380,11 @@ public final class ShortReadPipeline {
         cleanupLegacyRootDetailOutputs(outputDirectory);
         cleanupUnrequestedDetails(detailsDirectory, writeDiagnostics, writePerSample);
         System.err.println("[APAURA] primary outputs: apa.tsv, apa_events.tsv, apa_sites.tsv");
-        if (writeDiagnostics || writePerSample) {
-            System.err.println("[APAURA] optional details: " + detailsDirectory.getAbsolutePath());
+        if (writeDiagnostics || writePerSample || discoverNovelPas) {
+            System.err.println(
+                    "[APAURA] optional details: "
+                            + detailsDirectory.getAbsolutePath()
+            );
         }
 
         System.err.println(

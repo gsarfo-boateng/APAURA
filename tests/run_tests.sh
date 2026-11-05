@@ -145,6 +145,152 @@ cmp tests/out_short_sam/apa_events.tsv tests/out_short_bam/apa_events.tsv
 cmp tests/out_short_sam/apa_sites.tsv tests/out_short_bam/apa_sites.tsv
 
 
+# ============================================================
+# Conventional RNA-seq: coverage-supported novel TUTR PAS
+# ============================================================
+rm -rf tests/novel_pas_synthetic tests/out_short_novel
+mkdir -p tests/novel_pas_synthetic
+
+cat > tests/novel_pas_synthetic/mini.gtf <<'EOF'
+chrN	test	exon	101	300	.	+	.	gene_id "GENE_NOVEL"; transcript_id "TX_NOVEL"; gene_name "GENE_NOVEL"; gene_type "protein_coding";
+chrN	test	CDS	101	150	.	+	0	gene_id "GENE_NOVEL"; transcript_id "TX_NOVEL"; gene_name "GENE_NOVEL"; gene_type "protein_coding";
+EOF
+
+python3 - <<'PYMAKE'
+from pathlib import Path
+
+out = Path("tests/novel_pas_synthetic")
+
+def seq(n):
+    return "A" * n
+
+def qual(n):
+    return "I" * n
+
+def make_sam(path, n_short, n_long):
+    with open(path, "w") as fh:
+        fh.write("@HD\tVN:1.6\tSO:unsorted\n")
+        fh.write("@SQ\tSN:chrN\tLN:1000\n")
+
+        # Short alignments support only the proximal 100 nt.
+        # Long alignments cover the complete 200-nt terminal exon.
+        # APAURA uses the resulting CIGAR-aware coverage profile;
+        # read endpoints themselves are not interpreted as PAS.
+        for i in range(n_short):
+            n = 100
+            fh.write(
+                f"short{i}\t0\tchrN\t101\t60\t{n}M\t*\t0\t0\t"
+                f"{seq(n)}\t{qual(n)}\n"
+            )
+
+        for i in range(n_long):
+            n = 200
+            fh.write(
+                f"long{i}\t0\tchrN\t101\t60\t{n}M\t*\t0\t0\t"
+                f"{seq(n)}\t{qual(n)}\n"
+            )
+
+# All four biological samples support the same breakpoint near position 200.
+# Conditions differ in distal continuation, allowing the resulting two-PAS
+# TUTR event to flow through the normal differential machinery.
+make_sam(out / "C1.sam", 35, 5)
+make_sam(out / "C2.sam", 35, 5)
+make_sam(out / "T1.sam", 25, 15)
+make_sam(out / "T2.sam", 25, 15)
+
+with open(out / "samples.tsv", "w") as fh:
+    fh.write("sample\tcondition\tbam\n")
+    fh.write(f"C1\tcontrol\t{(out / 'C1.sam').resolve()}\n")
+    fh.write(f"C2\tcontrol\t{(out / 'C2.sam').resolve()}\n")
+    fh.write(f"T1\ttreated\t{(out / 'T1.sam').resolve()}\n")
+    fh.write(f"T2\ttreated\t{(out / 'T2.sam').resolve()}\n")
+PYMAKE
+
+java -jar target/APAURA.jar short-read \
+  --samples tests/novel_pas_synthetic/samples.tsv \
+  --gtf tests/novel_pas_synthetic/mini.gtf \
+  --control control \
+  --case treated \
+  --novel-tutr-pas \
+  --novel-window 50 \
+  --novel-min-depth 10 \
+  --novel-min-drop 0.50 \
+  --novel-min-replicates 2 \
+  --novel-cluster-distance 24 \
+  --min-informative-replicates 2 \
+  --min-sample-evidence 10 \
+  --write-diagnostics \
+  --out tests/out_short_novel
+
+# Candidate diagnostics must exist and contain an accepted
+# coverage-supported novel PAS.
+test -s tests/out_short_novel/details/novel_pas_candidates.tsv
+
+awk -F'\t' '
+NR == 1 {
+    for (i = 1; i <= NF; i++) h[$i] = i
+    next
+}
+$h["gene_id"] == "GENE_NOVEL" &&
+$h["site_origin"] == "novel" &&
+$h["discovery_method"] == "coverage_breakpoint" &&
+$h["supporting_samples"] == "4" &&
+$h["status"] == "accepted" {
+    found = 1
+}
+END {
+    exit(found ? 0 : 1)
+}' tests/out_short_novel/details/novel_pas_candidates.tsv
+
+# A gene with one annotated PAS plus one accepted novel PAS must
+# become a TUTR architecture and contain two analyzed sites.
+awk -F'\t' '
+NR == 1 {
+    for (i = 1; i <= NF; i++) h[$i] = i
+    next
+}
+$h["gene_id"] == "GENE_NOVEL" &&
+$h["apa_architecture"] == "TUTR" &&
+$h["number_sites"] == "2" {
+    found = 1
+}
+END {
+    exit(found ? 0 : 1)
+}' tests/out_short_novel/apa.tsv
+
+# Architecture diagnostics must preserve the distinction between
+# annotation-derived PAS count and the PAS universe actually analyzed.
+awk -F'\t' '
+NR == 1 {
+    for (i = 1; i <= NF; i++) h[$i] = i
+    next
+}
+$h["gene_id"] == "GENE_NOVEL" &&
+$h["annotation_architecture"] == "TUTR" &&
+$h["n_annotated_pas"] == "1" &&
+$h["n_terminal_pas"] == "2" &&
+$h["n_tutr_branches"] == "1" {
+    found = 1
+}
+END {
+    exit(found ? 0 : 1)
+}' tests/out_short_novel/details/apa_architecture.tsv
+
+# Both inferred proximal and annotated distal PAS must enter the
+# site-level differential output.
+awk -F'\t' '
+NR == 1 {
+    for (i = 1; i <= NF; i++) h[$i] = i
+    next
+}
+$h["gene_id"] == "GENE_NOVEL" {
+    n++
+}
+END {
+    exit(n == 2 ? 0 : 1)
+}' tests/out_short_novel/apa_sites.tsv
+
+
 # Hierarchical APA architecture truth set: TUTR, ALE, IPA, and mixed TUTR+ALE.
 rm -rf tests/out_architecture
 java -jar target/APAURA.jar run-direct \

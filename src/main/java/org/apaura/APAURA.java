@@ -312,7 +312,13 @@ public final class APAURA {
                 args.getDouble("min-ale-switch", 0.10),
                 args.getDouble("min-ipa-delta", 0.10),
                 args.getDouble("fdr", 0.05),
-                args.getDouble("wpi-threshold", 0.10)
+                args.getDouble("wpi-threshold", 0.10),
+                args.flag("novel-tutr-pas"),
+                args.getInt("novel-window", 50),
+                args.getDouble("novel-min-depth", 10.0),
+                args.getDouble("novel-min-drop", 0.50),
+                args.getInt("novel-min-replicates", 2),
+                args.getInt("novel-cluster-distance", 24)
         );
     }
 
@@ -424,6 +430,7 @@ public final class APAURA {
                 "  --mode annotated",
                 "  --library unstranded|forward|reverse",
                 "  --terminal-anchor-tolerance 5 --pas-merge-distance 24",
+                "  --novel-tutr-pas                optional coverage-supported novel TUTR PAS inference",
                 "  --min-segment-length 30 --min-sample-evidence 10",
                 "  --min-mapq 10 --min-delta-pau 0.10 --fdr 0.05 --wpi-threshold 0.10",
                 "",
@@ -743,6 +750,17 @@ public final class APAURA {
                 "",
                 "Options:",
                 "  --mode annotated          annotation-guided TUTR/ALE/IPA mode [annotated]",
+                "  --novel-tutr-pas               infer coverage-supported novel TUTR PAS",
+                "                            from condition-blind RNA-seq coverage [off]",
+                "  --novel-window INT    local coverage window [50]",
+                "  --novel-min-depth FLOAT",
+                "                            minimum upstream mean depth [10]",
+                "  --novel-min-drop FLOAT",
+                "                            minimum fractional coverage drop [0.50]",
+                "  --novel-min-replicates INT",
+                "                            biological samples supporting candidate [2]",
+                "  --novel-cluster-distance INT",
+                "                            merge nearby breakpoint calls [24]",
                 "  --control NAME            control condition [control]",
                 "  --case NAME               case condition [treated]",
                 "  --library MODE            unstranded|forward|reverse [unstranded]",

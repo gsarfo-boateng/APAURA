@@ -9,9 +9,11 @@ import org.apaura.model.TranscriptModel;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /** Builds non-redundant tandem terminal-exon APA groups from transcript annotations. */
 public final class ShortReadGroupBuilder {
@@ -62,6 +64,22 @@ public final class ShortReadGroupBuilder {
             int pasMergeDistance,
             int minSegmentLength
     ) {
+        return buildWithReport(
+                transcripts,
+                anchorTolerance,
+                pasMergeDistance,
+                minSegmentLength,
+                Collections.<String, List<Integer>>emptyMap()
+        );
+    }
+
+    public static BuildResult buildWithReport(
+            List<TranscriptModel> transcripts,
+            int anchorTolerance,
+            int pasMergeDistance,
+            int minSegmentLength,
+            Map<String, List<Integer>> novelPasByFamily
+    ) {
         Map<String, List<TranscriptModel>> transcriptsByGene = groupByGene(transcripts);
         List<ShortReadGroup> groups = new ArrayList<ShortReadGroup>();
         int initialAnchorGroups = 0;
@@ -86,6 +104,7 @@ TerminalFamilyReconciler.Result reconciliation =
             skippedNonQuantifiableFamilies += addGroups(
                     reconciliation.families,
                     minSegmentLength,
+                    novelPasByFamily,
                     groups
             );
         }
@@ -128,24 +147,30 @@ TerminalFamilyReconciler.Result reconciliation =
     private static int addGroups(
             List<TerminalFamilyReconciler.Family> families,
             int minSegmentLength,
+            Map<String, List<Integer>> novelPasByFamily,
             List<ShortReadGroup> output
     ) {
         int groupNumber = 0;
         int skipped = 0;
 
         for (TerminalFamilyReconciler.Family family : families) {
-            if (family.pasPositions.size() < 2) {
+            List<Integer> pasPositions = augmentedPasPositions(
+                    family,
+                    novelPasByFamily
+            );
+
+            if (pasPositions.size() < 2) {
                 continue;
             }
 
             List<CoverageSegment> coverageSegments = segments(
                     family.anchor0,
-                    family.pasPositions,
+                    pasPositions,
                     family.strand
             );
             if (!validSegments(
                     coverageSegments,
-                    family.pasPositions.size(),
+                    pasPositions.size(),
                     minSegmentLength
             )) {
                 skipped++;
@@ -155,6 +180,7 @@ TerminalFamilyReconciler.Result reconciliation =
             groupNumber++;
             output.add(createGroup(
                     family,
+                    pasPositions,
                     coverageSegments,
                     groupNumber
             ));
@@ -178,8 +204,38 @@ TerminalFamilyReconciler.Result reconciliation =
         return true;
     }
 
+    private static List<Integer> augmentedPasPositions(
+            TerminalFamilyReconciler.Family family,
+            Map<String, List<Integer>> novelPasByFamily
+    ) {
+        Set<Integer> positions =
+                new LinkedHashSet<Integer>(
+                        family.pasPositions
+                );
+
+        List<Integer> novel = novelPasByFamily.get(
+                ShortReadNovelPasCollector.familyKey(family)
+        );
+
+        if (novel != null) {
+            positions.addAll(novel);
+        }
+
+        List<Integer> ordered =
+                new ArrayList<Integer>(positions);
+
+        Collections.sort(ordered);
+
+        if (family.strand == Strand.MINUS) {
+            Collections.reverse(ordered);
+        }
+
+        return ordered;
+    }
+
     private static ShortReadGroup createGroup(
             TerminalFamilyReconciler.Family family,
+            List<Integer> pasPositions,
             List<CoverageSegment> segments,
             int groupNumber
     ) {
@@ -187,12 +243,12 @@ TerminalFamilyReconciler.Result reconciliation =
                 + "|TE"
                 + String.format(Locale.ROOT, "%03d", groupNumber);
         List<ShortReadSite> sites = new ArrayList<ShortReadSite>();
-        int siteCount = family.pasPositions.size();
+        int siteCount = pasPositions.size();
 
         for (int index = 0; index < siteCount; index++) {
             sites.add(new ShortReadSite(
                     id + "|PAS" + (index + 1),
-                    family.pasPositions.get(index),
+                    pasPositions.get(index),
                     index + 1,
                     siteCount == 1 ? 0.5 : (double) index / (siteCount - 1)
             ));

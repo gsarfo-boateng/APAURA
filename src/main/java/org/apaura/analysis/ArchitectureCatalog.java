@@ -5,6 +5,7 @@ import org.apaura.model.Strand;
 import org.apaura.model.TranscriptModel;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -54,47 +55,77 @@ public final class ArchitectureCatalog {
             int anchorTolerance,
             int pasMergeDistance
     ) {
-        Map<String, List<TranscriptModel>> transcriptsByGene = groupByGene(transcripts);
-        List<Entry> entries = new ArrayList<Entry>();
+        return build(
+                transcripts,
+                anchorTolerance,
+                pasMergeDistance,
+                Collections.<String, List<Integer>>emptyMap()
+        );
+    }
 
-        for (List<TranscriptModel> geneTranscripts : transcriptsByGene.values()) {
+    public static List<Entry> build(
+            List<TranscriptModel> transcripts,
+            int anchorTolerance,
+            int pasMergeDistance,
+            Map<String, List<Integer>> novelPasByFamily
+    ) {
+        Map<String, List<TranscriptModel>> transcriptsByGene =
+                groupByGene(transcripts);
+
+        List<Entry> entries =
+                new ArrayList<Entry>();
+
+        for (List<TranscriptModel> geneTranscripts
+                : transcriptsByGene.values()) {
+
             if (geneTranscripts.isEmpty()) {
                 continue;
             }
+
             TerminalFamilyReconciler.Result allReconciliation =
                     TerminalFamilyReconciler.reconcile(
                             geneTranscripts,
                             anchorTolerance,
                             pasMergeDistance
                     );
+
             List<TranscriptModel> terminalTranscripts =
-                    ShortReadIpa.terminalArchitectureTranscripts(geneTranscripts);
+                    ShortReadIpa.terminalArchitectureTranscripts(
+                            geneTranscripts
+                    );
+
             TerminalFamilyReconciler.Result terminalReconciliation =
                     TerminalFamilyReconciler.reconcile(
                             terminalTranscripts,
                             anchorTolerance,
                             pasMergeDistance
                     );
+
             entries.add(buildEntry(
                     geneTranscripts,
                     terminalReconciliation.families,
-                    allReconciliation.families
+                    allReconciliation.families,
+                    novelPasByFamily
             ));
         }
 
         entries.sort((left, right) -> {
-            int byChromosome = left.chrom.compareTo(right.chrom);
+            int byChromosome =
+                    left.chrom.compareTo(right.chrom);
+
             return byChromosome != 0
                     ? byChromosome
                     : left.geneId.compareTo(right.geneId);
         });
+
         return entries;
     }
 
     private static Entry buildEntry(
             List<TranscriptModel> transcripts,
             List<TerminalFamilyReconciler.Family> terminalFamilies,
-            List<TerminalFamilyReconciler.Family> allFamilies
+            List<TerminalFamilyReconciler.Family> allFamilies,
+            Map<String, List<Integer>> novelPasByFamily
     ) {
         TranscriptModel first = transcripts.get(0);
         Entry entry = new Entry();
@@ -117,14 +148,49 @@ public final class ArchitectureCatalog {
         entry.terminalBranches = terminalFamilies.size();
 
         Set<String> terminalPas = physicalPas(terminalFamilies);
+
         for (TerminalFamilyReconciler.Family family : terminalFamilies) {
-            if (family.pasPositions.size() >= 2) {
+
+            Set<Integer> familyPas =
+                    new LinkedHashSet<Integer>(
+                            family.pasPositions
+                    );
+
+            List<Integer> novel = novelPasByFamily.get(
+                    ShortReadNovelPasCollector.familyKey(
+                            family
+                    )
+            );
+
+            if (novel != null) {
+                for (Integer position : novel) {
+                    familyPas.add(position);
+
+                    terminalPas.add(
+                            family.chrom
+                                    + "\u0001"
+                                    + family.strand.symbol()
+                                    + "\u0001"
+                                    + position
+                    );
+                }
+            }
+
+            if (familyPas.size() >= 2) {
                 entry.tutrBranches++;
             }
         }
 
-        entry.annotatedPas = physicalPas(allFamilies).size();
-        entry.terminalPas = terminalPas.size();
+        /*
+         * annotatedPas remains strictly annotation-derived.
+         * terminalPas describes the PAS universe actually used by the
+         * terminal APA model and may therefore include accepted novel PAS.
+         */
+        entry.annotatedPas =
+                physicalPas(allFamilies).size();
+
+        entry.terminalPas =
+                terminalPas.size();
         entry.ipaCompatibleEnds = countIpaCompatibleEnds(transcripts);
         setArchitecture(entry);
         return entry;

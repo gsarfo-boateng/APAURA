@@ -103,6 +103,62 @@ class ArchitectureCatalogTest {
         assertEquals(0, entry.ipaCompatibleEnds);
     }
 
+    @Test
+    void acceptedNovelPasPromotesSinglePasGeneToTutr() {
+        TranscriptModel tx =
+                transcript("tx", "G4", Strand.PLUS);
+
+        tx.addExon(100, 300);
+        tx.addCds(100, 150);
+
+        TerminalFamilyReconciler.Result reconciliation =
+                TerminalFamilyReconciler.reconcile(
+                        Arrays.asList(tx),
+                        5,
+                        24
+                );
+
+        String familyKey =
+                ShortReadNovelPasCollector.familyKey(
+                        reconciliation.families.get(0)
+                );
+
+        java.util.Map<String, java.util.List<Integer>> novel =
+                new java.util.LinkedHashMap<
+                        String,
+                        java.util.List<Integer>
+                >();
+
+        novel.put(
+                familyKey,
+                Arrays.asList(199)
+        );
+
+        List<ArchitectureCatalog.Entry> entries =
+                ArchitectureCatalog.build(
+                        Arrays.asList(tx),
+                        5,
+                        24,
+                        novel
+                );
+
+        assertEquals(1, entries.size());
+
+        ArchitectureCatalog.Entry entry =
+                entries.get(0);
+
+        assertEquals("TUTR", entry.architectureClass);
+        assertEquals("TUTR", entry.components);
+
+        // Strictly annotation-derived.
+        assertEquals(1, entry.annotatedPas);
+
+        // PAS universe actually analyzed.
+        assertEquals(2, entry.terminalPas);
+
+        assertEquals(1, entry.tutrBranches);
+    }
+
     private static TranscriptModel transcript(
             String transcriptId,
             String geneId,
