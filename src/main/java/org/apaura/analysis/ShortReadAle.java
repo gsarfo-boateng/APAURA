@@ -917,9 +917,7 @@ public final class ShortReadAle {
                     && Double.isFinite(result.switchIndex)
                     && result.switchIndex >= minSwitch;
 
-            result.aleDirection = result.aleChange
-                    ? inferredDirection(result.deltaWpi, wpiThreshold)
-                    : "stable";
+            result.aleDirection = result.observedDirection;
         }
     }
 

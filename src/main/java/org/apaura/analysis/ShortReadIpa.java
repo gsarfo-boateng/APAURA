@@ -132,6 +132,7 @@ public final class ShortReadIpa {
         public double rho = Double.NaN;
         public double eventPrecision = Double.NaN;
         public String direction = "not_applicable";
+        public boolean significant;
         public String method = "not_tested";
         public String status = "insufficient_evidence";
     }
@@ -925,11 +926,22 @@ public final class ShortReadIpa {
         for (SiteResult result : results) {
             if (!"ok".equals(result.status)) {
                 result.direction = "not_applicable";
-            } else if (result.q <= fdr && Math.abs(result.delta) >= minDelta) {
-                result.direction = result.delta > 0.0 ? "gain" : "loss";
-            } else {
-                result.direction = "stable";
+                result.significant = false;
+                continue;
             }
+
+            boolean observedChange =
+                    Double.isFinite(result.delta)
+                    && Math.abs(result.delta) >= minDelta;
+
+            result.significant =
+                    observedChange
+                    && Double.isFinite(result.q)
+                    && result.q <= fdr;
+
+            result.direction = observedChange
+                    ? (result.delta > 0.0 ? "gain" : "loss")
+                    : "stable";
         }
     }
 
@@ -969,11 +981,15 @@ public final class ShortReadIpa {
                 }
             }
             if ("gain".equals(site.direction)) {
-                gene.nSignificantEvents++;
                 hasGain.put(gene.geneId, true);
+                if (site.significant) {
+                    gene.nSignificantEvents++;
+                }
             } else if ("loss".equals(site.direction)) {
-                gene.nSignificantEvents++;
                 hasLoss.put(gene.geneId, true);
+                if (site.significant) {
+                    gene.nSignificantEvents++;
+                }
             }
 
             SiteResult current = representative.get(gene.geneId);

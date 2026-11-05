@@ -228,7 +228,7 @@ class DifferentialApaTest {
         assertTrue(gene.tutrShiftMagnitude >= 0.10);
         assertTrue(gene.tutrMinFdr > 0.05);
         assertTrue(gene.internalExonMinFdr <= 0.05);
-        assertEquals("stable", gene.tutrDirection);
+        assertEquals("lengthening", gene.tutrDirection);
         assertEquals("internal_exon", gene.changedMechanisms);
         assertEquals("internal_exon:loss", gene.apaEvent);
         assertTrue(gene.apaChange);

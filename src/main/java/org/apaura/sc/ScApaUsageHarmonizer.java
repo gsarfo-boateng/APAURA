@@ -196,7 +196,7 @@ final class ScApaUsageHarmonizer {
                         );
                 String apaDirection =
                         ApaUsageMetrics.supportedDirection(
-                                apaChange,
+                                observedChange,
                                 summary.deltaWpi,
                                 wpiThreshold
                         );

@@ -154,9 +154,7 @@ public final class ShortReadIntegratedApa {
             result.tutrShiftMagnitude = representative.apd;
             result.tutrJsd = representative.jsd;
             result.tutrObservedDirection = representative.observedDirection;
-            result.tutrDirection = result.tutrChange
-                    ? representative.apaDirection
-                    : "stable";
+            result.tutrDirection = representative.apaDirection;
         }
         result.tutrStatus = anyOk
                 ? "ok"
@@ -174,6 +172,18 @@ public final class ShortReadIntegratedApa {
         if (candidate.apaChange != current.apaChange) {
             return candidate.apaChange;
         }
+
+        boolean candidateObserved =
+                !"stable".equals(candidate.apaDirection)
+                && !"not_applicable".equals(candidate.apaDirection);
+        boolean currentObserved =
+                !"stable".equals(current.apaDirection)
+                && !"not_applicable".equals(current.apaDirection);
+
+        if (candidateObserved != currentObserved) {
+            return candidateObserved;
+        }
+
         if (Double.isFinite(candidate.minFdr) && Double.isFinite(current.minFdr)) {
             return candidate.minFdr < current.minFdr;
         }
@@ -202,7 +212,7 @@ public final class ShortReadIntegratedApa {
         result.nIpaChangedEvents = ipa.nSignificantEvents;
         result.ipaRepresentativeEvent = ipa.representativeEvent;
         result.ipaChange = ipa.nSignificantEvents > 0;
-        result.ipaDirection = result.ipaChange ? ipa.ipaDirection : "stable";
+        result.ipaDirection = ipa.ipaDirection;
         result.ipaDeltaUsage = ipa.representativeDelta;
         result.ipaMaxAbsDelta = ipa.maxAbsDelta;
         result.ipaMinPvalue = ipa.minPvalue;
@@ -214,7 +224,7 @@ public final class ShortReadIntegratedApa {
         List<String> mechanisms = new ArrayList<String>();
         List<String> directions = new ArrayList<String>();
 
-        // Match the canonical direct/long-read mechanism ordering.
+        // Formal statistical support.
         if (result.ipaChange) {
             mechanisms.add("IPA");
             directions.add("IPA=" + result.ipaDirection);
@@ -232,23 +242,47 @@ public final class ShortReadIntegratedApa {
         result.mechanismDirections = join(directions, ";", "none");
         result.apaChange = !mechanisms.isEmpty();
 
-        if (mechanisms.isEmpty()) {
+        // Observed biological direction is independent of FDR.
+        List<String> observedMechanisms = new ArrayList<String>();
+        List<String> observedDirections = new ArrayList<String>();
+
+        addObserved(
+                observedMechanisms, observedDirections,
+                "IPA", result.ipaDirection
+        );
+        addObserved(
+                observedMechanisms, observedDirections,
+                "ALE", result.aleDirection
+        );
+        addObserved(
+                observedMechanisms, observedDirections,
+                "TUTR", result.tutrDirection
+        );
+
+        if (observedDirections.isEmpty()) {
             result.apaDirection = "stable";
-            result.apaEvent = result.architecture.architectureClass + ":stable";
-        } else if (mechanisms.size() == 1) {
-            String mechanism = mechanisms.get(0);
-            if ("TUTR".equals(mechanism)) result.apaDirection = result.tutrDirection;
-            else if ("ALE".equals(mechanism)) result.apaDirection = result.aleDirection;
-            else result.apaDirection = result.ipaDirection;
-            result.apaEvent = mechanism + ":" + result.apaDirection;
+        } else if (observedDirections.size() == 1) {
+            result.apaDirection = observedDirections.get(0);
         } else {
             result.apaDirection = "complex";
-            if ("mixed".equals(result.architecture.architectureClass)
-                    && result.tutrChange && result.aleChange) {
-                result.apaEvent = "mixed:complex";
-            } else {
-                result.apaEvent = "multi_mechanism:complex";
-            }
+        }
+
+        // apaEvent retains formal-mechanism semantics.
+        if (mechanisms.size() == 1) {
+            String mechanism = mechanisms.get(0);
+            result.apaEvent =
+                    mechanism + ":" + mechanismDirection(result, mechanism);
+        } else if (mechanisms.size() > 1) {
+            result.apaEvent =
+                    "mixed".equals(result.architecture.architectureClass)
+                            && mechanisms.contains("TUTR")
+                            && mechanisms.contains("ALE")
+                            ? "mixed:complex"
+                            : "multi_mechanism:complex";
+        } else {
+            result.apaEvent =
+                    result.architecture.architectureClass
+                            + ":" + result.apaDirection;
         }
 
         result.minPvalue = finiteMin(
@@ -263,10 +297,12 @@ public final class ShortReadIntegratedApa {
         boolean anyOk = "ok".equals(result.tutrStatus)
                 || "ok".equals(result.aleStatus)
                 || "ok".equals(result.ipaStatus);
-        boolean anySparse = "insufficient_replicate_support".equals(result.tutrStatus)
+        boolean anySparse =
+                "insufficient_replicate_support".equals(result.tutrStatus)
                 || "insufficient_replicate_support".equals(result.aleStatus)
                 || "insufficient_replicate_support".equals(result.ipaStatus);
-        boolean anyEvidenceFailure = "insufficient_evidence".equals(result.tutrStatus)
+        boolean anyEvidenceFailure =
+                "insufficient_evidence".equals(result.tutrStatus)
                 || "insufficient_evidence".equals(result.aleStatus)
                 || "insufficient_evidence".equals(result.ipaStatus);
 
@@ -277,6 +313,38 @@ public final class ShortReadIntegratedApa {
                 : anyEvidenceFailure
                 ? "insufficient_evidence"
                 : "not_tested";
+    }
+
+    private static void addObserved(
+            List<String> mechanisms,
+            List<String> directions,
+            String mechanism,
+            String direction
+    ) {
+        if (direction == null
+                || "stable".equals(direction)
+                || "not_applicable".equals(direction)) {
+            return;
+        }
+
+        mechanisms.add(mechanism);
+        directions.add(direction);
+    }
+
+    private static String mechanismDirection(
+            Result result,
+            String mechanism
+    ) {
+        if ("TUTR".equals(mechanism)) {
+            return result.tutrDirection;
+        }
+        if ("ALE".equals(mechanism)) {
+            return result.aleDirection;
+        }
+        if ("IPA".equals(mechanism)) {
+            return result.ipaDirection;
+        }
+        return result.apaDirection;
     }
 
     private static double finiteMin(double left, double right) {

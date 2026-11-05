@@ -626,55 +626,138 @@ public final class ArchitectureAnalysis {
         List<String> changedMechanisms = new ArrayList<String>();
         List<String> mechanismDirections = new ArrayList<String>();
 
+        // Formal support remains FDR-dependent.
         if (supported) {
             classifyIpa(
-                    gene,
-                    metrics,
-                    fdr,
-                    ipaThreshold,
-                    activeDirections,
-                    changedMechanisms,
-                    mechanismDirections
+                    gene, metrics, fdr, ipaThreshold,
+                    activeDirections, changedMechanisms, mechanismDirections
             );
             classifyAle(
-                    gene,
-                    metrics,
-                    fdr,
-                    aleThreshold,
-                    tutrThreshold,
-                    activeDirections,
-                    changedMechanisms,
-                    mechanismDirections
+                    gene, metrics, fdr, aleThreshold, tutrThreshold,
+                    activeDirections, changedMechanisms, mechanismDirections
             );
             classifyTutr(
-                    gene,
-                    metrics,
-                    fdr,
-                    tutrThreshold,
-                    activeDirections,
-                    changedMechanisms,
-                    mechanismDirections
+                    gene, metrics, fdr, tutrThreshold,
+                    activeDirections, changedMechanisms, mechanismDirections
             );
             classifyInternalExon(
-                    gene,
-                    metrics,
-                    fdr,
-                    internalExonThreshold,
-                    activeDirections,
-                    changedMechanisms,
-                    mechanismDirections
+                    gene, metrics, fdr, internalExonThreshold,
+                    activeDirections, changedMechanisms, mechanismDirections
             );
         }
 
         gene.apaChange = supported && !changedMechanisms.isEmpty();
-        gene.apaDirection = overallDirection(supported, gene.apaChange, activeDirections);
         gene.changedMechanisms = changedMechanisms.isEmpty()
                 ? "none"
                 : join(changedMechanisms, "+");
         gene.mechanismDirections = mechanismDirections.isEmpty()
                 ? "none"
                 : join(mechanismDirections, ";");
+
+        // Biological direction depends on the observed effect, not FDR.
+        applyObservedDirections(
+                gene,
+                metrics,
+                internalExonThreshold,
+                aleThreshold,
+                ipaThreshold,
+                tutrThreshold
+        );
+
+        gene.apaDirection = observedOverallDirection(gene);
         gene.apaEvent = buildApaEvent(gene, changedMechanisms);
+    }
+
+    private static void applyObservedDirections(
+            DifferentialApa.GeneResult gene,
+            Metrics metrics,
+            double internalExonThreshold,
+            double aleThreshold,
+            double ipaThreshold,
+            double tutrThreshold
+    ) {
+        if (!"not_applicable".equals(gene.ipaDirection)) {
+            gene.ipaDirection =
+                    Math.abs(metrics.deltaIpaUsage) >= ipaThreshold
+                            ? (metrics.deltaIpaUsage > 0 ? "gain" : "loss")
+                            : "stable";
+        }
+
+        if (!"not_applicable".equals(gene.aleDirection)) {
+            if (Double.isFinite(metrics.aleSwitchIndex)
+                    && metrics.aleSwitchIndex >= aleThreshold) {
+                if (Double.isFinite(metrics.deltaAleWpi)
+                        && Math.abs(metrics.deltaAleWpi) >= tutrThreshold) {
+                    gene.aleDirection =
+                            metrics.deltaAleWpi > 0
+                                    ? "lengthening"
+                                    : "shortening";
+                } else {
+                    gene.aleDirection = "switch";
+                }
+            } else {
+                gene.aleDirection = "stable";
+            }
+        }
+
+        if (!"not_applicable".equals(gene.tutrDirection)) {
+            if (Double.isFinite(metrics.tutrShiftMagnitude)
+                    && metrics.tutrShiftMagnitude >= tutrThreshold) {
+                if (Double.isFinite(metrics.deltaTutrWpi)
+                        && Math.abs(metrics.deltaTutrWpi) >= tutrThreshold) {
+                    gene.tutrDirection =
+                            metrics.deltaTutrWpi > 0
+                                    ? "lengthening"
+                                    : "shortening";
+                } else {
+                    gene.tutrDirection = "redistribution";
+                }
+            } else {
+                gene.tutrDirection = "stable";
+            }
+        }
+
+        if (!"not_applicable".equals(gene.internalExonDirection)) {
+            gene.internalExonDirection =
+                    Math.abs(metrics.deltaInternalUsage) >= internalExonThreshold
+                            ? (metrics.deltaInternalUsage > 0 ? "gain" : "loss")
+                            : "stable";
+        }
+    }
+
+    private static String observedOverallDirection(
+            DifferentialApa.GeneResult gene
+    ) {
+        String first = null;
+        int count = 0;
+
+        String[] directions = {
+                gene.ipaDirection,
+                gene.aleDirection,
+                gene.tutrDirection,
+                gene.internalExonDirection
+        };
+
+        for (String direction : directions) {
+            if (direction == null
+                    || "stable".equals(direction)
+                    || "not_applicable".equals(direction)) {
+                continue;
+            }
+
+            if (first == null) {
+                first = direction;
+            }
+            count++;
+        }
+
+        if (count == 0) {
+            return "stable";
+        }
+        if (count == 1) {
+            return first;
+        }
+        return "complex";
     }
 
     private static void initializeDirections(
@@ -827,39 +910,41 @@ public final class ArchitectureAnalysis {
         mechanismDirections.add(mechanism + "=" + direction);
     }
 
-    private static String overallDirection(
-            boolean supported,
-            boolean apaChange,
-            List<String> activeDirections
-    ) {
-        if (!supported) {
-            return "stable";
-        }
-        if (activeDirections.size() > 1) {
-            return "complex";
-        }
-        if (activeDirections.size() == 1) {
-            return activeDirections.get(0);
-        }
-        if (apaChange) {
-            return "redistribution";
-        }
-        return "stable";
-    }
-
     private static String buildApaEvent(
             DifferentialApa.GeneResult gene,
             List<String> changedMechanisms
     ) {
         if (changedMechanisms.size() == 1) {
-            return changedMechanisms.get(0) + ":" + gene.apaDirection;
+            String mechanism = changedMechanisms.get(0);
+            return mechanism + ":" + mechanismDirection(gene, mechanism);
         }
+
         if (changedMechanisms.size() > 1) {
             return "mixed".equals(gene.apaType)
                     ? "mixed:complex"
                     : "multi_mechanism:complex";
         }
+
         return gene.apaType + ":" + gene.apaDirection;
+    }
+
+    private static String mechanismDirection(
+            DifferentialApa.GeneResult gene,
+            String mechanism
+    ) {
+        if ("TUTR".equals(mechanism)) {
+            return gene.tutrDirection;
+        }
+        if ("ALE".equals(mechanism)) {
+            return gene.aleDirection;
+        }
+        if ("IPA".equals(mechanism)) {
+            return gene.ipaDirection;
+        }
+        if ("internal_exon".equals(mechanism)) {
+            return gene.internalExonDirection;
+        }
+        return gene.apaDirection;
     }
 
     private static boolean hasUnresolvedTerminalPas(

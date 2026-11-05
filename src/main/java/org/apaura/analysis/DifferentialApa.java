@@ -510,12 +510,14 @@ public final class DifferentialApa {
             }
         }
 
-        boolean supported = result.minFdr <= fdr;
-        result.apaChange = supported
-                && Double.isFinite(result.apd)
+        boolean observedChange =
+                Double.isFinite(result.apd)
                 && result.apd >= effect;
+        boolean supported = result.minFdr <= fdr;
+
+        result.apaChange = supported && observedChange;
         result.apaDirection = ApaUsageMetrics.supportedDirection(
-                result.apaChange,
+                observedChange,
                 result.deltaWpi,
                 wpiThreshold
         );
@@ -559,12 +561,15 @@ public final class DifferentialApa {
             GeneResult gene = genes.get(index);
             gene.ksFdr = adjusted[index];
 
-            boolean supported = gene.minFdr <= fdr || gene.ksFdr <= fdr;
-            gene.apaChange = supported
-                    && Double.isFinite(gene.apd)
+            boolean observedChange =
+                    Double.isFinite(gene.apd)
                     && gene.apd >= effect;
+            boolean supported =
+                    gene.minFdr <= fdr || gene.ksFdr <= fdr;
+
+            gene.apaChange = supported && observedChange;
             gene.apaDirection = ApaUsageMetrics.supportedDirection(
-                    gene.apaChange,
+                    observedChange,
                     gene.deltaWpi,
                     wpiThreshold
             );

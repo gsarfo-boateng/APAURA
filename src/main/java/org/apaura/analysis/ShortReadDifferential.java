@@ -737,12 +737,15 @@ public final class ShortReadDifferential {
                     Double.isFinite(result.eventFdr)
                     && result.eventFdr <= fdr;
 
-            result.apaChange = statisticallySupported
-                    && Double.isFinite(result.apd)
+            boolean observedChange =
+                    Double.isFinite(result.apd)
                     && result.apd >= effect;
 
+            result.apaChange =
+                    statisticallySupported && observedChange;
+
             result.apaDirection = ApaUsageMetrics.supportedDirection(
-                    result.apaChange,
+                    observedChange,
                     result.deltaWpi,
                     wpiThreshold
             );

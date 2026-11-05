@@ -240,23 +240,9 @@ public final class ThreeSeqGeneDifferential {
             }
 
             gene.apaChange = false;
-            gene.apaDirection = "stable";
             gene.changedMechanisms = "none";
             gene.mechanismDirections = "none";
-            gene.apaEvent = gene.apaType + ":stable";
-
-            if (!"not_applicable".equals(gene.tutrDirection)) {
-                gene.tutrDirection = "stable";
-            }
-            if (!"not_applicable".equals(gene.aleDirection)) {
-                gene.aleDirection = "stable";
-            }
-            if (!"not_applicable".equals(gene.ipaDirection)) {
-                gene.ipaDirection = "stable";
-            }
-            if (!"not_applicable".equals(gene.internalExonDirection)) {
-                gene.internalExonDirection = "stable";
-            }
+            gene.apaEvent = gene.apaType + ":" + gene.apaDirection;
         }
     }
 

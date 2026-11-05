@@ -97,11 +97,11 @@ public final class ApaUsageMetrics {
     }
 
     public static String supportedDirection(
-            boolean changed,
+            boolean observedChange,
             double deltaWpi,
             double threshold
     ) {
-        if (!changed) {
+        if (!observedChange) {
             return "stable";
         }
         return observedDirection(deltaWpi, threshold);
