@@ -27,7 +27,7 @@ import java.util.Map;
 public final class PlotRegionCommand {
 
     private static final String RESOURCE =
-            "/org/apaura/plot/APAURA_region_plot.R";
+            "/org/apaura/plot/plot_apaura.R";
 
     private PlotRegionCommand() {
     }
