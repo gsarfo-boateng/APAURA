@@ -11,10 +11,10 @@ BG5	TUTR	no	stable	stable	not_applicable	not_applicable
 BG6	TUTR	no	stable	stable	not_applicable	not_applicable
 BG7	TUTR	no	stable	stable	not_applicable	not_applicable
 BG8	TUTR	no	stable	stable	not_applicable	not_applicable
-AF1	ALE	yes	distal_switch	not_applicable	distal_switch	not_applicable
-AF2	ALE	yes	distal_switch	not_applicable	distal_switch	not_applicable
-AF3	ALE	yes	distal_switch	not_applicable	distal_switch	not_applicable
-AF4	ALE	yes	distal_switch	not_applicable	distal_switch	not_applicable
+AF1	ALE	yes	lengthening	not_applicable	lengthening	not_applicable
+AF2	ALE	yes	lengthening	not_applicable	lengthening	not_applicable
+AF3	ALE	yes	lengthening	not_applicable	lengthening	not_applicable
+AF4	ALE	yes	lengthening	not_applicable	lengthening	not_applicable
 AB1	ALE	no	stable	not_applicable	stable	not_applicable
 AB2	ALE	no	stable	not_applicable	stable	not_applicable
 AB3	ALE	no	stable	not_applicable	stable	not_applicable

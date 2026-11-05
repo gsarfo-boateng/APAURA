@@ -63,7 +63,7 @@ class ApaUsageMetricsTest {
         assertEquals(0.04, treatedWpi - controlWpi, 1.0E-12);
         assertTrue(jsd > 0.0);
         assertEquals(
-                "no_directional_shift",
+                "redistribution",
                 ApaUsageMetrics.observedDirection(
                         treatedWpi - controlWpi,
                         0.10

@@ -31,7 +31,7 @@ python3 tests/make_architecture_synthetic.py
 rm -rf tests/out_direct tests/out_isoquant tests/out_short_sam tests/out_short_bam
 
 # Direct-RNA / true 3'-end regression test
-java -jar APAURA.jar run-direct \
+java -jar target/APAURA.jar run-direct \
   --samples examples/samples.tsv \
   --gtf examples/mini.gtf \
   --control control --case treated \
@@ -46,14 +46,13 @@ NR == 1 {
 }
 $h["gene_id"] == "GENE1" &&
 $h["apa_architecture"] == "TUTR" &&
-$h["apa_change"] == "yes" &&
+$h["fdr"] != "NA" && ($h["fdr"] + 0) <= 0.05 &&
 $h["apa_direction"] == "shortening" &&
 $h["changed_mechanisms"] == "TUTR" &&
 $h["primary_mechanism"] == "TUTR" &&
 $h["number_sites"] == "2" &&
 ($h["effect_size"] + 0) > 0.549999 &&
-($h["effect_size"] + 0) < 0.550001 &&
-$h["status"] == "ok" {
+($h["effect_size"] + 0) < 0.550001 {
     found = 1
 }
 END {
@@ -68,7 +67,7 @@ NR == 1 {
 }
 $h["gene_id"] == "GENE1" &&
 $h["mechanism"] == "TUTR" &&
-$h["apa_change"] == "yes" &&
+$h["fdr"] != "NA" && ($h["fdr"] + 0) <= 0.05 &&
 $h["apa_direction"] == "shortening" &&
 $h["number_sites"] == "2" &&
 ($h["effect_size"] + 0) > 0.549999 &&
@@ -82,12 +81,12 @@ END {
 # Legacy-rich diagnostics are preserved under details/.
 grep -q $'0.550000\t-0.550000' tests/out_direct/details/apa.tsv
 grep -q 'ks_fdr' tests/out_direct/details/apa.tsv
-java -jar APAURA.jar ends --bam tests/synthetic.bam --out tests/synthetic.ends.tsv
+java -jar target/APAURA.jar ends --bam tests/synthetic.bam --out tests/synthetic.ends.tsv
 grep -q $'chr1\t699\t700' tests/synthetic.ends.tsv
 grep -q $'chr1\t899\t900' tests/synthetic.ends.tsv
 
 # IsoQuant corrected_reads BED should reproduce the direct-end result.
-java -jar APAURA.jar run-isoquant \
+java -jar target/APAURA.jar run-isoquant \
   --samples examples/isoquant/samples.tsv \
   --gtf examples/mini.gtf \
   --control control --case treated \
@@ -97,7 +96,7 @@ cmp tests/out_direct/apa.tsv tests/out_isoquant/apa.tsv
 cmp tests/out_direct/apa_sites.tsv tests/out_isoquant/apa_sites.tsv
 
 # Conventional short-read coverage engine: SAM
-java -jar APAURA.jar short-read \
+java -jar target/APAURA.jar short-read \
   --samples examples/shortread/samples.tsv \
   --gtf examples/shortread/mini_shortread.gtf \
   --control control --case treated \
@@ -108,7 +107,7 @@ java -jar APAURA.jar short-read \
 awk -F'\t' '
   NR==1 {for(i=1;i<=NF;i++) c[$i]=i; next}
   $(c["apa_architecture"])=="TUTR" &&
-  $(c["apa_change"])=="yes" &&
+  $(c["fdr"])!="NA" && $(c["fdr"])+0<=0.05 &&
   $(c["apa_direction"])=="shortening" &&
   $(c["changed_mechanisms"])=="TUTR" &&
   $(c["primary_mechanism"])=="TUTR" {ok=1}
@@ -124,7 +123,7 @@ test -s tests/out_short_sam/details/apa_sites_full.tsv
 head -1 tests/out_short_sam/details/apa_full.tsv | grep -q 'min_mechanism_fdr'
 
 # Same engine through the internal BAM parser
-java -jar APAURA.jar short-read \
+java -jar target/APAURA.jar short-read \
   --samples examples/shortread/samples_bam.tsv \
   --gtf examples/shortread/mini_shortread.gtf \
   --control control --case treated \
@@ -135,7 +134,7 @@ java -jar APAURA.jar short-read \
 awk -F'\t' '
   NR==1 {for(i=1;i<=NF;i++) c[$i]=i; next}
   $(c["apa_architecture"])=="TUTR" &&
-  $(c["apa_change"])=="yes" &&
+  $(c["fdr"])!="NA" && $(c["fdr"])+0<=0.05 &&
   $(c["apa_direction"])=="shortening" &&
   $(c["changed_mechanisms"])=="TUTR" &&
   $(c["primary_mechanism"])=="TUTR" {ok=1}
@@ -148,7 +147,7 @@ cmp tests/out_short_sam/apa_sites.tsv tests/out_short_bam/apa_sites.tsv
 
 # Hierarchical APA architecture truth set: TUTR, ALE, IPA, and mixed TUTR+ALE.
 rm -rf tests/out_architecture
-java -jar APAURA.jar run-direct \
+java -jar target/APAURA.jar run-direct \
   --samples examples/architecture/samples.tsv \
   --gtf examples/architecture/architecture.gtf \
   --control control --case treated \
@@ -170,11 +169,10 @@ NR==1 {
 }
 $h["gene_id"]=="TUTR1" &&
 $h["apa_architecture"]=="TUTR" &&
-$h["apa_change"]=="yes" &&
+$h["fdr"] != "NA" && ($h["fdr"] + 0) <= 0.05 &&
 $h["apa_direction"]=="shortening" &&
 $h["changed_mechanisms"]=="TUTR" &&
-$h["primary_mechanism"]=="TUTR" &&
-$h["status"]=="ok" {
+$h["primary_mechanism"]=="TUTR" {
     found=1
 }
 END { exit(found ? 0 : 1) }
@@ -187,7 +185,7 @@ NR==1 {
 }
 $h["gene_id"]=="TUTR1" &&
 $h["mechanism"]=="TUTR" &&
-$h["apa_change"]=="yes" &&
+$h["fdr"] != "NA" && ($h["fdr"] + 0) <= 0.05 &&
 $h["apa_direction"]=="shortening" {
     found=1
 }
@@ -199,10 +197,10 @@ test -s tests/out_architecture/details/apa_sites.tsv
 test -s tests/out_architecture/details/apa_architecture.tsv
 test -s tests/out_architecture/details/pau.tsv
 assert_re '^TUTR1\tTUTR1\tprotein_coding\tTUTR\tTUTR\tyes\tshortening\tshortening\tnot_applicable\tnot_applicable\tnot_applicable\tTUTR:shortening\tTUTR\tTUTR=shortening' tests/out_architecture/details/apa.tsv
-assert_re '^ALE1\tALE1\tprotein_coding\tALE\tALE\tyes\tdistal_switch\tnot_applicable\tdistal_switch\tnot_applicable\tnot_applicable\tALE:distal_switch\tALE\tALE=distal_switch' tests/out_architecture/details/apa.tsv
+assert_re '^ALE1\tALE1\tprotein_coding\tALE\tALE\tyes\tlengthening\tnot_applicable\tlengthening\tnot_applicable\tnot_applicable\tALE:lengthening\tALE\tALE=lengthening' tests/out_architecture/details/apa.tsv
 assert_re '^IPA1\tIPA1\tprotein_coding\tSINGLE_PAS\tnone\tyes\tgain\tnot_applicable\tnot_applicable\tgain\tnot_applicable\tIPA:gain\tIPA\tIPA=gain' tests/out_architecture/details/apa.tsv
-assert_re '^MIX1\tMIX1\tprotein_coding\tmixed\tTUTR\+ALE\tyes\tcomplex\tshortening\tdistal_switch\tnot_applicable\tnot_applicable\tmixed:complex\tALE\+TUTR\tALE=distal_switch;TUTR=shortening' tests/out_architecture/details/apa.tsv
-assert_re '^NODIR1\tNODIR1\tprotein_coding\tTUTR\tTUTR\tyes\tno_directional_shift\tno_directional_shift\tnot_applicable\tnot_applicable\tnot_applicable\tTUTR:no_directional_shift\tTUTR\tTUTR=no_directional_shift' tests/out_architecture/details/apa.tsv
+assert_re '^MIX1\tMIX1\tprotein_coding\tmixed\tTUTR\+ALE\tyes\tcomplex\tshortening\tlengthening\tnot_applicable\tnot_applicable\tmixed:complex\tALE\+TUTR\tALE=lengthening;TUTR=shortening' tests/out_architecture/details/apa.tsv
+assert_re '^NODIR1\tNODIR1\tprotein_coding\tTUTR\tTUTR\tyes\tredistribution\tredistribution\tnot_applicable\tnot_applicable\tnot_applicable\tTUTR:redistribution\tTUTR\tTUTR=redistribution' tests/out_architecture/details/apa.tsv
 assert_re '^TUTRIPA1\tTUTRIPA1\tprotein_coding\tTUTR\tTUTR\tyes\tcomplex\tshortening\tnot_applicable\tgain\tnot_applicable\tmulti_mechanism:complex\tIPA\+TUTR\tIPA=gain;TUTR=shortening' tests/out_architecture/details/apa.tsv
 grep -q 'apa_direction' tests/out_architecture/details/apa_architecture.tsv
 grep -q 'tutr_direction' tests/out_architecture/details/apa_architecture.tsv
@@ -218,7 +216,7 @@ rm -rf tests/sc_synthetic tests/out_sc_reference tests/out_sc_compare
 mkdir -p tests/sc_synthetic
 
 # Public CLI help
-java -jar APAURA.jar sc --help > tests/sc_synthetic/sc_help.txt
+java -jar target/APAURA.jar sc --help > tests/sc_synthetic/sc_help.txt
 
 grep -q 'gtf-sites' tests/sc_synthetic/sc_help.txt
 grep -q 'import-sites' tests/sc_synthetic/sc_help.txt
@@ -228,7 +226,7 @@ grep -q 'reference' tests/sc_synthetic/sc_help.txt
 grep -q 'compare' tests/sc_synthetic/sc_help.txt
 
 for cmd in gtf-sites import-sites merge-sites quantify reference compare; do
-  java -jar APAURA.jar sc "$cmd" --help >/dev/null
+  java -jar target/APAURA.jar sc "$cmd" --help >/dev/null
 done
 
 # Small transcript annotation with two PAS per gene.
@@ -246,7 +244,7 @@ chr2	test	exon	1100	1300	.	-	.	gene_id "GENE2"; transcript_id "GENE2_TX2"; gene_
 EOF
 
 # PAS catalog plus architecture sidecars.
-java -jar APAURA.jar sc gtf-sites \
+java -jar target/APAURA.jar sc gtf-sites \
   --annotation tests/sc_synthetic/mini.gtf \
   --out tests/sc_synthetic/sites.tsv
 
@@ -268,7 +266,7 @@ read5	16	chr2	1200	60	50M	*	0	0	AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 read6	16	chr2	1100	60	50M	*	0	0	AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA	*	CB:Z:CELL2	UB:Z:UMI5	GX:Z:GENE2
 EOF
 
-java -jar APAURA.jar sc quantify \
+java -jar target/APAURA.jar sc quantify \
   --sites tests/sc_synthetic/sites.tsv \
   --alignment tests/sc_synthetic/reads.sam \
   --sample-id TEST_SAMPLE \
@@ -292,7 +290,7 @@ CELL1	TEST_SAMPLE	TestCells
 CELL2	TEST_SAMPLE	TestCells
 EOF
 
-java -jar APAURA.jar sc reference \
+java -jar target/APAURA.jar sc reference \
   --sites tests/sc_synthetic/sites.tsv \
   --counts tests/sc_synthetic/counts.tsv \
   --cells tests/sc_synthetic/cells.tsv \
@@ -320,7 +318,7 @@ TRT	ALL	GENE2_PAS1	30
 TRT	ALL	GENE2_PAS2	5
 EOF
 
-java -jar APAURA.jar sc compare \
+java -jar target/APAURA.jar sc compare \
   --sites tests/sc_synthetic/sites.tsv \
   --samples tests/sc_synthetic/samples.tsv \
   --counts tests/sc_synthetic/compare_counts.tsv \
@@ -346,7 +344,7 @@ assert_re '^ALL\tGENE2\tGENE2\tchr2\t-\t2\tUNREPLICATED_OBSERVED_SHIFT\t1\t1\t35
 # RBP motif-enrichment regression test
 python3 tests/make_rbp_synthetic.py
 rm -rf tests/out_rbp
-java -jar APAURA.jar rbp-enrich \
+java -jar target/APAURA.jar rbp-enrich \
   --sites examples/rbp/apa_sites.tsv \
   --genes examples/rbp/apa.tsv \
   --fasta examples/rbp/synthetic.fa \
@@ -355,7 +353,7 @@ java -jar APAURA.jar rbp-enrich \
   --background-ratio 2 --permutations 200 --seed 7 \
   --out tests/out_rbp
 assert_re '^TUTR:shortening\tPAS\tRBP_A\tRBP_A\t4\t8\t4\t0\t' tests/out_rbp/rbp.tsv
-assert_re '^ALE:distal_switch\tALE_acceptor\tRBP_C\tRBP_C\t4\t8\t4\t0\t' tests/out_rbp/rbp.tsv
+assert_re '^ALE:lengthening\tALE_acceptor\tRBP_C\tRBP_C\t4\t8\t4\t0\t' tests/out_rbp/rbp.tsv
 grep -q 'relative_hit_starts' tests/out_rbp/rbp_hits.tsv
 grep -q $'RBP_A\tRBP_A\t-10\t4' tests/out_rbp/rbp_profile.tsv
 

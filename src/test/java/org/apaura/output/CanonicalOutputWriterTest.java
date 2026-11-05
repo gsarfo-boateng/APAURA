@@ -33,9 +33,9 @@ class CanonicalOutputWriterTest {
 
         assertEquals(
                 "chrom\tstart\tend\tstrand\tgene_id\tgene_name\tbiotype\t"
-                        + "apa_architecture\tapa_change\tapa_direction\t"
+                        + "apa_architecture\tapa_direction\t"
                         + "changed_mechanisms\tprimary_mechanism\t"
-                        + "number_sites\teffect_size\tpvalue\tfdr\tstatus",
+                        + "number_sites\teffect_size\tpvalue\tfdr",
                 lines.get(0)
         );
     }
@@ -58,8 +58,8 @@ class CanonicalOutputWriterTest {
 
         assertEquals(
                 "chrom\tstart\tend\tstrand\tgene_id\tgene_name\tbiotype\t"
-                        + "event_id\tmechanism\tnumber_sites\tapa_change\t"
-                        + "apa_direction\teffect_size\tpvalue\tfdr\tstatus",
+                        + "event_id\tmechanism\tnumber_sites\t"
+                        + "apa_direction\teffect_size\tpvalue\tfdr",
                 lines.get(0)
         );
     }
@@ -84,7 +84,7 @@ class CanonicalOutputWriterTest {
                 "chrom\tposition\tstrand\tgene_id\tgene_name\tevent_id\t"
                         + "mechanism\tfeature_id\tfeature_rank\t"
                         + "control_usage\tcase_usage\tdelta_usage\t"
-                        + "pvalue\tfdr\tstatus",
+                        + "pvalue\tfdr",
                 lines.get(0)
         );
     }

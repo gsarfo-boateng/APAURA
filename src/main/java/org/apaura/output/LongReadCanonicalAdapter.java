@@ -302,13 +302,7 @@ public final class LongReadCanonicalAdapter {
             row.put("pvalue", fmt(primaryP));
             row.put("fdr", fmt(primaryFdr));
         }
-
-        row.put(
-                "status",
-                gene.nSites >= 2 ? "ok" : "insufficient_sites"
-        );
-
-        return row;
+return row;
     }
 
     private static Map<String, String> eventRow(
@@ -334,13 +328,7 @@ public final class LongReadCanonicalAdapter {
         row.put("event_id", gene.geneId + "|" + mechanism);
         row.put("mechanism", mechanism);
         row.put("number_sites", Integer.toString(sites.size()));
-        row.put(
-                "apa_change",
-                containsMechanism(gene.changedMechanisms, mechanism)
-                        ? "yes"
-                        : "no"
-        );
-        row.put("apa_direction", mechanismDirection(gene, mechanism));
+row.put("apa_direction", mechanismDirection(gene, mechanism));
         row.put("effect_size", fmt(mechanismEffect(gene, metrics, mechanism)));
         row.put(
                 "pvalue",

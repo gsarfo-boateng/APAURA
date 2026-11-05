@@ -88,7 +88,7 @@ class ShortReadAleTest {
         assertEquals("ale-beta-binomial-LRT", results.branches.get(0).method);
         assertTrue(Double.isFinite(results.branches.get(0).q));
         assertTrue(results.genes.get(0).aleChange);
-        assertEquals("distal_switch", results.genes.get(0).aleDirection);
+        assertEquals("lengthening", results.genes.get(0).aleDirection);
         assertTrue(results.genes.get(0).switchIndex > 0.5);
     }
 

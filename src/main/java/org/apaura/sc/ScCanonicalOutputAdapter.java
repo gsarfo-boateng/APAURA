@@ -35,7 +35,6 @@ final class ScCanonicalOutputAdapter {
             "gene_name",
             "biotype",
             "apa_architecture",
-            "apa_change",
             "apa_direction",
             "changed_mechanisms",
             "primary_mechanism",
@@ -43,7 +42,6 @@ final class ScCanonicalOutputAdapter {
             "effect_size",
             "pvalue",
             "fdr",
-            "status"
     };
 
     private static final String[] EVENT_COLUMNS = {
@@ -58,12 +56,10 @@ final class ScCanonicalOutputAdapter {
             "event_id",
             "mechanism",
             "number_sites",
-            "apa_change",
             "apa_direction",
             "effect_size",
             "pvalue",
             "fdr",
-            "status"
     };
 
     private static final String[] SITE_COLUMNS = {
@@ -82,7 +78,6 @@ final class ScCanonicalOutputAdapter {
             "delta_usage",
             "pvalue",
             "fdr",
-            "status"
     };
 
     private ScCanonicalOutputAdapter() {
@@ -114,7 +109,6 @@ final class ScCanonicalOutputAdapter {
                 "n_sites",
                 "analysis_mode",
                 "apd",
-                "apa_change",
                 "apa_direction",
                 "evidence_status",
                 "primary_pvalue",
@@ -171,7 +165,6 @@ final class ScCanonicalOutputAdapter {
                     genes.get(row, "gene_symbol"),
                     "NA",
                     "TUTR",
-                    apaChange,
                     genes.get(row, "apa_direction"),
                     "yes".equals(apaChange) ? "TUTR" : "none",
                     "TUTR",
@@ -179,7 +172,6 @@ final class ScCanonicalOutputAdapter {
                     genes.get(row, "apd"),
                     evidence.pvalue,
                     evidence.fdr,
-                    genes.get(row, "evidence_status")
             });
 
             eventRows.add(new String[]{
@@ -194,12 +186,10 @@ final class ScCanonicalOutputAdapter {
                     eventId,
                     "TUTR",
                     genes.get(row, "n_sites"),
-                    apaChange,
                     genes.get(row, "apa_direction"),
                     genes.get(row, "apd"),
                     evidence.pvalue,
                     evidence.fdr,
-                    genes.get(row, "evidence_status")
             });
         }
 
@@ -223,7 +213,6 @@ final class ScCanonicalOutputAdapter {
                     sites.get(row, "delta_pau"),
                     "NA",
                     "NA",
-                    "usage_only"
             });
         }
 

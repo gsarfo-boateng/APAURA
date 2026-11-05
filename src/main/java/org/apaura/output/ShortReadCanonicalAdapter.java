@@ -339,7 +339,7 @@ public final class ShortReadCanonicalAdapter {
             return "not_applicable";
         }
 
-        if ("no_directional_shift".equals(direction)
+        if ("redistribution".equals(direction)
                 || "switch".equals(direction)) {
             return "redistribution";
         }

@@ -21,7 +21,6 @@ public final class CanonicalOutputWriter {
             "gene_name",
             "biotype",
             "apa_architecture",
-            "apa_change",
             "apa_direction",
             "changed_mechanisms",
             "primary_mechanism",
@@ -29,7 +28,6 @@ public final class CanonicalOutputWriter {
             "effect_size",
             "pvalue",
             "fdr",
-            "status"
     };
 
     public static final String[] EVENT_COLUMNS = {
@@ -43,12 +41,10 @@ public final class CanonicalOutputWriter {
             "event_id",
             "mechanism",
             "number_sites",
-            "apa_change",
             "apa_direction",
             "effect_size",
             "pvalue",
             "fdr",
-            "status"
     };
 
     public static final String[] SITE_COLUMNS = {
@@ -66,7 +62,6 @@ public final class CanonicalOutputWriter {
             "delta_usage",
             "pvalue",
             "fdr",
-            "status"
     };
 
     private CanonicalOutputWriter() {

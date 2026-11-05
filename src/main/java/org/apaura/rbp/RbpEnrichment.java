@@ -30,8 +30,6 @@ public final class RbpEnrichment {
     static final class Gene {
         String id;
         String arch;
-        String change;
-        String dir;
         String tutr;
         String ale;
         String ipa;
@@ -662,12 +660,12 @@ public final class RbpEnrichment {
         return "shortening".equals(direction)
                 || "lengthening".equals(direction)
                 || (includeNoDirectionalShift
-                && "no_directional_shift".equals(direction));
+                && "redistribution".equals(direction));
     }
 
     private static boolean validAle(String direction) {
-        return "proximal_switch".equals(direction)
-                || "distal_switch".equals(direction)
+        return "shortening".equals(direction)
+                || "lengthening".equals(direction)
                 || "switch".equals(direction);
     }
 
@@ -954,9 +952,72 @@ public final class RbpEnrichment {
         }
     }
 
+    private static File resolveRbpInput(
+            String path,
+            String... requiredColumns
+    ) throws IOException {
+        File requested = new File(path);
+
+        if (hasColumns(requested, requiredColumns)) {
+            return requested;
+        }
+
+        File parent = requested.getAbsoluteFile().getParentFile();
+        File detailed = parent == null
+                ? null
+                : new File(new File(parent, "details"), requested.getName());
+
+        if (detailed != null
+                && detailed.isFile()
+                && hasColumns(detailed, requiredColumns)) {
+            return detailed;
+        }
+
+        throw new IllegalArgumentException(
+                "RBP enrichment requires detailed APAURA metadata. "
+                        + "Expected the required columns in "
+                        + requested.getPath()
+                        + " or "
+                        + (detailed == null ? "details/" : detailed.getPath())
+        );
+    }
+
+    private static boolean hasColumns(
+            File file,
+            String... requiredColumns
+    ) throws IOException {
+        if (!file.isFile()) {
+            return false;
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String header = reader.readLine();
+            if (header == null) {
+                return false;
+            }
+
+            Map<String, Integer> columns = index(header);
+            for (String column : requiredColumns) {
+                if (!columns.containsKey(column)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
     private static Map<String, Gene> readGenes(String path) throws IOException {
         Map<String, Gene> genes = new HashMap<String, Gene>();
-        try (BufferedReader reader = new BufferedReader(new FileReader(path))) {
+        File source = resolveRbpInput(
+                path,
+                "gene_id",
+                "tutr_direction",
+                "ale_direction",
+                "ipa_direction"
+        );
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(source))) {
             Map<String, Integer> columns = index(reader.readLine());
             String line;
             while ((line = reader.readLine()) != null) {
@@ -964,8 +1025,6 @@ public final class RbpEnrichment {
                 Gene gene = new Gene();
                 gene.id = value(fields, columns, "gene_id");
                 gene.arch = value(fields, columns, "apa_architecture");
-                gene.change = value(fields, columns, "apa_change");
-                gene.dir = value(fields, columns, "apa_direction");
                 gene.tutr = value(fields, columns, "tutr_direction");
                 gene.ale = value(fields, columns, "ale_direction");
                 gene.ipa = value(fields, columns, "ipa_direction");
@@ -977,7 +1036,17 @@ public final class RbpEnrichment {
 
     private static List<Site> readSites(String path) throws IOException {
         List<Site> sites = new ArrayList<Site>();
-        try (BufferedReader reader = new BufferedReader(new FileReader(path))) {
+        File source = resolveRbpInput(
+                path,
+                "site_id",
+                "pos0",
+                "architecture_role",
+                "terminal_exon_anchor0",
+                "site_rank",
+                "delta_pau"
+        );
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(source))) {
             Map<String, Integer> columns = index(reader.readLine());
             String line;
             while ((line = reader.readLine()) != null) {

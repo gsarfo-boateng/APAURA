@@ -41,7 +41,7 @@ class DifferentialApaTest {
         assertTrue(gene.usageJsd > 0.0);
         assertEquals(0.04, gene.deltaWpi, 1.0E-12);
         assertTrue(gene.apaChange);
-        assertEquals("no_directional_shift", gene.apaDirection);
+        assertEquals("redistribution", gene.apaDirection);
     }
 
     @Test

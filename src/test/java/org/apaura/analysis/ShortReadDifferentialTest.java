@@ -170,9 +170,9 @@ class ShortReadDifferentialTest {
         assertEquals(0.12, summary.apd, 1.0E-12);
         assertTrue(summary.jsd > 0.0);
         assertEquals(0.04, summary.deltaWpi, 1.0E-12);
-        assertEquals("no_directional_shift", summary.observedDirection);
+        assertEquals("redistribution", summary.observedDirection);
         assertTrue(summary.apaChange);
-        assertEquals("no_directional_shift", summary.apaDirection);
+        assertEquals("redistribution", summary.apaDirection);
     }
 
 

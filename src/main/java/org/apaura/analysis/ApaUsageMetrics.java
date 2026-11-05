@@ -93,7 +93,7 @@ public final class ApaUsageMetrics {
         if (deltaWpi <= -threshold) {
             return "shortening";
         }
-        return "no_directional_shift";
+        return "redistribution";
     }
 
     public static String supportedDirection(

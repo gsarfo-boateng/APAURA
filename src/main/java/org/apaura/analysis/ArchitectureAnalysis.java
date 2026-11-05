@@ -740,8 +740,8 @@ public final class ArchitectureAnalysis {
         if (!Double.isNaN(metrics.deltaAleWpi)
                 && Math.abs(metrics.deltaAleWpi) >= directionThreshold) {
             gene.aleDirection = metrics.deltaAleWpi > 0
-                    ? "distal_switch"
-                    : "proximal_switch";
+                    ? "lengthening"
+                    : "shortening";
         } else {
             gene.aleDirection = "switch";
         }
@@ -776,7 +776,7 @@ public final class ArchitectureAnalysis {
                     ? "lengthening"
                     : "shortening";
         } else {
-            gene.tutrDirection = "no_directional_shift";
+            gene.tutrDirection = "redistribution";
         }
 
         addMechanism(
@@ -842,7 +842,7 @@ public final class ArchitectureAnalysis {
             return activeDirections.get(0);
         }
         if (apaChange) {
-            return "no_directional_shift";
+            return "redistribution";
         }
         return "stable";
     }

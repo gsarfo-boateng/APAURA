@@ -933,8 +933,8 @@ public final class ShortReadAle {
 
     private static String observedDirection(double deltaWpi, double threshold) {
         if (!Double.isFinite(deltaWpi)) return "not_applicable";
-        if (deltaWpi >= threshold) return "distal_switch";
-        if (deltaWpi <= -threshold) return "proximal_switch";
+        if (deltaWpi >= threshold) return "lengthening";
+        if (deltaWpi <= -threshold) return "shortening";
         return "switch";
     }
 

@@ -60,16 +60,14 @@ class ScApaUsageHarmonizerTest {
         assertEquals(0.04, row.d("delta_wpi"), 1.0e-9);
         assertEquals("yes", row.s("observed_change"));
         assertEquals("yes", row.s("formal_support"));
-        assertEquals("yes", row.s("apa_change"));
-        assertEquals("no_directional_shift", row.s("apa_direction"));
+        assertEquals("redistribution", row.s("apa_direction"));
         assertEquals("redistribution", row.s("apa_classification"));
 
         Table canonical = firstDataRow(out.resolve("apa.tsv"));
         assertEquals("ALL", canonical.s("group"));
         assertEquals("TUTR", canonical.s("apa_architecture"));
-        assertEquals("yes", canonical.s("apa_change"));
         assertEquals(
-                "no_directional_shift",
+                "redistribution",
                 canonical.s("apa_direction")
         );
         assertEquals("TUTR", canonical.s("primary_mechanism"));
