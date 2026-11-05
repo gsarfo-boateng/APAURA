@@ -28,9 +28,7 @@ APAURA supports:
                                             APAURA v0.10.1
                                             Alternative Polyadenylation Architecture, Usage, and Regulatory Analysis
 
-                                            modes:
-                                            run-3seq | run-direct | run-isoquant | short-read | sc
-                                            plot-region | rbp-enrich | ends
+                                            modes: run-3seq | run-direct | run-isoquant | short-read | sc | plot-region | rbp-enrich | ends
 ```
 
 ---
