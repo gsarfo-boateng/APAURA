@@ -27,7 +27,7 @@ import java.util.Map;
 public final class PlotRegionCommand {
 
     private static final String RESOURCE =
-            "/org/apaura/plot/plot_apaura.R";
+            "/org/apaura/plot/plot_region.R";
 
     private PlotRegionCommand() {
     }
@@ -731,7 +731,7 @@ public final class PlotRegionCommand {
 
             File fallback =
                     new File(
-                            "scripts/APAURA_region_plot.R"
+                            "src/main/resources/org/apaura/plot/plot_region.R"
                     );
 
             if (fallback.isFile()) {
@@ -742,7 +742,7 @@ public final class PlotRegionCommand {
                     "Bundled APAURA region renderer was not found. "
                             + "Expected classpath resource "
                             + RESOURCE
-                            + " or scripts/APAURA_region_plot.R"
+                            + " or src/main/resources/org/apaura/plot/plot_region.R"
             );
         }
 

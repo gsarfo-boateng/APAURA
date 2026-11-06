@@ -12,9 +12,7 @@ suppressPackageStartupMessages({
   library(GenomicRanges)
 })
 
-# ============================================================
 # CLI
-# ============================================================
 
 parse_cli <- function(x){
   out <- list(); i <- 1
@@ -192,9 +190,7 @@ empty_panel <- function(title){
   ggplot()+xscale(FALSE)+theme_void()+ggtitle(title)
 }
 
-# ============================================================
 # APA sites
-# ============================================================
 
 apa_file <- file.path(
   results_dir,
@@ -219,7 +215,6 @@ if (sc_plot_region) {
 if(!file.exists(apa_file)) stop("Missing: ",apa_file)
 
 apa <- read_tab(apa_file)
-
 
 # BEGIN APAURA_SC_SITE_ADAPTER
 
@@ -276,10 +271,7 @@ if (sc_plot_region) {
     )
   }
 
-
-  # ----------------------------------------------------------
   # Exact group selection
-  # ----------------------------------------------------------
 
   available_groups <- unique(
     as.character(
@@ -324,10 +316,7 @@ if (sc_plot_region) {
     )
   }
 
-
-  # ----------------------------------------------------------
   # Canonical APAURA plotting columns
-  # ----------------------------------------------------------
 
   apa$gene_name <- as.character(
     apa$gene_symbol
@@ -357,10 +346,7 @@ if (sc_plot_region) {
     )
   )
 
-
-  # ----------------------------------------------------------
   # Biological-replicate counts from site table
-  # ----------------------------------------------------------
 
   first_finite_int <- function(x) {
 
@@ -392,10 +378,7 @@ if (sc_plot_region) {
     )
   }
 
-
-  # ----------------------------------------------------------
   # Read gene-level/event-level SC result
-  # ----------------------------------------------------------
 
   sc_event_candidates <- c(
     file.path(
@@ -437,7 +420,6 @@ if (sc_plot_region) {
       ]
     }
 
-
     # Support either gene_symbol or gene_name.
     if (!"gene_symbol" %in% names(sc_event)) {
 
@@ -458,7 +440,6 @@ if (sc_plot_region) {
       sc_event$gene_id <- ""
     }
 
-
     if (!empty(gene)) {
 
       sc_event <- sc_event %>%
@@ -469,11 +450,9 @@ if (sc_plot_region) {
         )
     }
 
-
     if (nrow(sc_event)) {
 
       ev <- sc_event[1, , drop = FALSE]
-
 
       if ("apa_architecture" %in% names(ev)) {
 
@@ -484,14 +463,12 @@ if (sc_plot_region) {
         )
       }
 
-
       if ("classification" %in% names(ev)) {
 
         sc_event_classification <- as.character(
           ev$classification[1]
         )
       }
-
 
       effect_col <- c(
         "delta_utr_index",
@@ -513,7 +490,6 @@ if (sc_plot_region) {
         )
       }
 
-
       if ("qvalue" %in% names(ev)) {
 
         sc_event_q <- suppressWarnings(
@@ -523,14 +499,12 @@ if (sc_plot_region) {
         )
       }
 
-
       if ("analysis_mode" %in% names(ev)) {
 
         sc_analysis_mode <- as.character(
           ev$analysis_mode[1]
         )
       }
-
 
       if ("n_control_samples" %in% names(ev)) {
 
@@ -543,7 +517,6 @@ if (sc_plot_region) {
         if (is.finite(z))
           sc_n_control <- z
       }
-
 
       if ("n_treated_samples" %in% names(ev)) {
 
@@ -559,13 +532,10 @@ if (sc_plot_region) {
     }
   }
 
-
-  # ----------------------------------------------------------
   # Determine replication state
   #
   # Cells are never treated as biological replicates.
   # These counts refer to biological samples/pseudobulks.
-  # ----------------------------------------------------------
 
   sc_unreplicated <- (
     is.na(sc_n_control)
@@ -582,13 +552,10 @@ if (sc_plot_region) {
     )
   )
 
-
-  # ----------------------------------------------------------
   # Event-level statistical support
   #
   # Only valid when biological replication exists.
   # This is NOT a per-PAS FDR.
-  # ----------------------------------------------------------
 
   sc_event_supported <- (
     !sc_unreplicated
@@ -599,7 +566,6 @@ if (sc_plot_region) {
       || abs(sc_event_effect) >= apa_effect
     )
   )
-
 
   # PAS rows themselves do not currently carry a site-specific FDR.
   # Keep the canonical site FDR explicitly NA.
@@ -613,7 +579,6 @@ if (sc_plot_region) {
 
     apa$status <- "replicated_sc"
   }
-
 
   message(
     "[APAURA plot] single-cell result group: ",
@@ -828,9 +793,7 @@ ipa_guides <- if(nrow(ipa)){
   tibble()
 }
 
-# ============================================================
 # Evidence
-# ============================================================
 
 if(mode=="short-read"){
 
@@ -886,9 +849,7 @@ if(mode=="short-read"){
 
   # Same denominator as strand-specific bigWig:
   # total assigned = plus transcript + minus transcript
-  # ============================================================
   # Persistent normalization cache
-  # ============================================================
 
   CACHE_FILE <- file.path(results_dir,"plot_normalization.tsv")
 
@@ -1078,13 +1039,9 @@ if(mode=="short-read"){
     mutate(condition=factor(condition,levels=order0),
       label=factor(label,levels=label_levels))
 
-  # ----------------------------------------------------------
   # Coverage plot
-  # ----------------------------------------------------------
 
- # ----------------------------------------------------------
   # Whole-gene overview + 3' terminal-region coverage zoom
-  # ----------------------------------------------------------
 
   tested_terminal_pas <- numeric()
 
@@ -1408,9 +1365,7 @@ if(mode=="short-read"){
     show_zoom=FALSE
   )
 
-# ============================================================
 # Direct RNA / IsoQuant
-# ============================================================
 
 } else {
 
@@ -1441,9 +1396,7 @@ if(mode=="short-read"){
       subtitle=ifelse(mode=="run-direct", "Direct-RNA 3′-end/PAS usage", "IsoQuant corrected-read PAS usage"))
 }
 
-# ============================================================
 # APA panel
-# ============================================================
 
 summary_architecture <- NA_character_
 summary_tutr_call <- "not significant"
@@ -1464,7 +1417,6 @@ if (sc_plot_region) {
       sc_event_architecture
   }
 
-
   cls <- toupper(
     ifelse(
       is.na(sc_event_classification),
@@ -1480,14 +1432,12 @@ if (sc_plot_region) {
     TRUE ~ "remodeling"
   )
 
-
   arch_label <- ifelse(
     is.na(summary_architecture)
     || !nzchar(summary_architecture),
     "APA",
     summary_architecture
   )
-
 
   if (sc_unreplicated) {
 
@@ -1517,7 +1467,6 @@ if (sc_plot_region) {
     )
   }
 
-
   effect_label <- if (
     is.finite(sc_event_effect)
   ) {
@@ -1528,7 +1477,6 @@ if (sc_plot_region) {
   } else {
     "ΔUTR index = NA"
   }
-
 
   max_dpau <- suppressWarnings(
     max(
@@ -1548,7 +1496,6 @@ if (sc_plot_region) {
     "max |ΔPAU| = NA"
   }
 
-
   group_label <- if (
     nzchar(group_filter)
   ) {
@@ -1556,7 +1503,6 @@ if (sc_plot_region) {
   } else {
     "single-cell group"
   }
-
 
   if (sc_unreplicated) {
 
@@ -1773,9 +1719,7 @@ if(nrow(apa)){
   }
 }
 
-# ============================================================
 # IPA panel
-# ============================================================
 
 if(show_ipa){
 
@@ -1800,9 +1744,7 @@ if(show_ipa){
 }
 
 # Gene model
-# ============================================================
 # APA architecture / gene model
-# ============================================================
 
 p_ale <- NULL
 show_ale_panel <- FALSE
@@ -2731,7 +2673,6 @@ plot_height_final <- if(
 } else {
   plot_height
 }
-
 
 # Save
 

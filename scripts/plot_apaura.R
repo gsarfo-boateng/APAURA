@@ -8,95 +8,52 @@ options(stringsAsFactors = FALSE)
 
 required_packages <- c("ggplot2", "dplyr", "tidyr", "readr", "scales", "tibble")
 missing_packages <- required_packages[!vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)]
-if (length(missing_packages) > 0) {
-  stop(
-    "Missing R packages: ", paste(missing_packages, collapse = ", "),
-    "\nInstall them with:\n  install.packages(c(",
-    paste(sprintf('"%s"', missing_packages), collapse = ", "), "))",
-    call. = FALSE
-  )
-}
+if (length(missing_packages)) stop(
+  "Missing R packages: ", paste(missing_packages, collapse = ", "),
+  "\nInstall them with:\n  install.packages(c(", paste(sprintf('"%s"', missing_packages), collapse = ", "), "))", call. = FALSE)
 
 suppressPackageStartupMessages({
-  library(ggplot2)
-  library(dplyr)
-  library(tidyr)
-  library(readr)
-  library(scales)
+  library(ggplot2); library(dplyr); library(tidyr); library(readr); library(scales)
 })
 
-usage <- function() {
-  cat(paste0(
-    "APAURA plotting script\n\n",
-    "Usage:\n",
-    "  Rscript plot_apaura.R --input RESULTS_DIR [options]\n\n",
-    "Options:\n",
-    "  --input DIR          APAURA results directory [required]\n",
-    "  --rbp DIR            RBP results directory; defaults to INPUT/rbp or INPUT\n",
-    "  --out DIR            Figure output directory [default: INPUT/figures]\n",
-    "  --fdr FLOAT          FDR threshold [default: 0.05]\n",
-    "  --delta-pau FLOAT    |delta PAU| threshold [default: 0.10]\n",
-    "  --top INT            Number of top genes/RBPs to show [default: 20]\n",
-    "  --width FLOAT        Default individual figure width in inches [default: 8]\n",
-    "  --height FLOAT       Default individual figure height in inches [default: 6]\n",
-    "  --help                Show this message\n\n",
-    "Outputs:\n",
-    "  Individual PDF and PNG figures\n",
-    "  APAURA_figures.pdf (multi-page figure book)\n",
-    "  figure_manifest.tsv\n"
-  ))
-}
+usage <- function() cat(paste0(
+  "APAURA plotting script\n\nUsage:\n  Rscript plot_apaura.R --input RESULTS_DIR [options]\n\n",
+  "Options:\n",
+  "  --input DIR          APAURA results directory [required]\n",
+  "  --rbp DIR            RBP results directory; defaults to INPUT/rbp or INPUT\n",
+  "  --out DIR            Figure output directory [default: INPUT/figures]\n",
+  "  --fdr FLOAT          FDR threshold [default: 0.05]\n",
+  "  --delta-pau FLOAT    |delta PAU| threshold [default: 0.10]\n",
+  "  --top INT            Number of top genes/RBPs to show [default: 20]\n",
+  "  --width FLOAT        Default individual figure width in inches [default: 8]\n",
+  "  --height FLOAT       Default individual figure height in inches [default: 6]\n",
+  "  --help                Show this message\n\n",
+  "Outputs:\n  Individual PDF and PNG figures\n  APAURA_figures.pdf (multi-page figure book)\n  figure_manifest.tsv\n"))
 
 parse_args <- function(x) {
-  out <- list(
-    input = NULL,
-    rbp = NULL,
-    out = NULL,
-    fdr = 0.05,
-    delta_pau = 0.10,
-    top = 20L,
-    width = 8,
-    height = 6,
-    help = FALSE
-  )
+  out <- list(input = NULL, rbp = NULL, out = NULL, fdr = .05, delta_pau = .10,
+              top = 20L, width = 8, height = 6, help = FALSE)
+  value_keys <- c("--input"="input", "--rbp"="rbp", "--out"="out", "--fdr"="fdr",
+                  "--delta-pau"="delta_pau", "--top"="top", "--width"="width", "--height"="height")
   i <- 1L
   while (i <= length(x)) {
     key <- x[[i]]
-    if (key == "--help" || key == "-h") {
-      out$help <- TRUE
-      i <- i + 1L
-      next
-    }
-    if (!grepl("^--", key)) stop("Unknown argument: ", key, call. = FALSE)
+    if (key %in% c("--help", "-h")) { out$help <- TRUE; i <- i + 1L; next }
+    if (!key %in% names(value_keys)) stop("Unknown argument: ", key, call. = FALSE)
     if (i == length(x)) stop("Missing value for ", key, call. = FALSE)
-    val <- x[[i + 1L]]
-    if (key == "--input") out$input <- val
-    else if (key == "--rbp") out$rbp <- val
-    else if (key == "--out") out$out <- val
-    else if (key == "--fdr") out$fdr <- as.numeric(val)
-    else if (key == "--delta-pau") out$delta_pau <- as.numeric(val)
-    else if (key == "--top") out$top <- as.integer(val)
-    else if (key == "--width") out$width <- as.numeric(val)
-    else if (key == "--height") out$height <- as.numeric(val)
-    else stop("Unknown argument: ", key, call. = FALSE)
+    nm <- unname(value_keys[[key]]); val <- x[[i + 1L]]
+    out[[nm]] <- if (nm %in% c("fdr", "delta_pau", "width", "height")) as.numeric(val) else if (nm == "top") as.integer(val) else val
     i <- i + 2L
   }
   out
 }
 
 args <- parse_args(commandArgs(trailingOnly = TRUE))
-if (args$help) {
-  usage()
-  quit(save = "no", status = 0)
-}
-if (is.null(args$input)) {
-  usage()
-  stop("\n--input is required.", call. = FALSE)
-}
+if (args$help) { usage(); quit(save = "no", status = 0) }
+if (is.null(args$input)) { usage(); stop("\n--input is required.", call. = FALSE) }
 if (!dir.exists(args$input)) stop("Input directory does not exist: ", args$input, call. = FALSE)
 if (is.null(args$out)) args$out <- file.path(args$input, "figures")
 dir.create(args$out, recursive = TRUE, showWarnings = FALSE)
-
 if (is.null(args$rbp)) {
   rbp_candidate <- file.path(args$input, "rbp")
   args$rbp <- if (dir.exists(rbp_candidate)) rbp_candidate else args$input
@@ -119,8 +76,7 @@ find_file <- function(name, dirs) {
   roots <- dirs[!is.na(dirs) & nzchar(dirs)]
   candidates <- unique(c(
     file.path(roots, name),
-    file.path(roots, "details", name)
-  ))
+    file.path(roots, "details", name)))
   hit <- candidates[file.exists(candidates)]
   if (length(hit) == 0) NULL else hit[[1]]
 }
@@ -160,8 +116,7 @@ theme_apaura <- function() {
       plot.title = element_text(face = "bold"),
       axis.title = element_text(face = "bold"),
       strip.text = element_text(face = "bold"),
-      legend.title = element_text(face = "bold")
-    )
+      legend.title = element_text(face = "bold"))
 }
 
 theme_set(theme_apaura())
@@ -171,8 +126,7 @@ manifest <- tibble::tibble(
   figure = character(),
   pdf = character(),
   png = character(),
-  description = character()
-)
+  description = character())
 
 add_plot <- function(name, p, description, width = args$width, height = args$height) {
   pdf_file <- file.path(args$out, paste0(name, ".pdf"))
@@ -182,9 +136,39 @@ add_plot <- function(name, p, description, width = args$width, height = args$hei
   plots[[name]] <<- p
   manifest <<- dplyr::bind_rows(
     manifest,
-    tibble::tibble(figure = name, pdf = pdf_file, png = png_file, description = description)
-  )
+    tibble::tibble(figure = name, pdf = pdf_file, png = png_file, description = description))
   message("[figure] ", name)
+}
+
+count_plot <- function(d, col, name, title, ylab, desc, width = args$width, height = args$height) {
+  if (!has_cols(d, col)) return(invisible(NULL))
+  z <- d %>% transmute(value = .data[[col]]) %>% filter(!is.na(value), nzchar(value)) %>% count(value, sort = TRUE)
+  if (!nrow(z)) return(invisible(NULL))
+  p <- ggplot(z, aes(x = reorder(pretty_label(value), n), y = n)) + geom_col() + coord_flip() + labs(title = title, x = NULL, y = ylab)
+  add_plot(name, p, desc, width, height)
+}
+
+xy_plot <- function(d, x, y, name, title, xlab, ylab, desc, shape_col = NULL, alpha = .75,
+                    width = args$width, height = args$height, require_nonzero = FALSE) {
+  if (!has_cols(d, c(x, y))) return(invisible(NULL))
+  z <- d %>% transmute(x = num(.data[[x]]), y = num(.data[[y]]),
+                       shape = if (is.null(shape_col) || !shape_col %in% names(d)) "" else as.character(.data[[shape_col]])) %>%
+    filter(is.finite(x), is.finite(y))
+  if (!nrow(z) || (require_nonzero && !any(z$x > 0 | z$y > 0))) return(invisible(NULL))
+  p <- ggplot(z, aes(x, y)) + geom_point(alpha = alpha) + geom_abline(slope = 1, intercept = 0, linetype = 2) + coord_equal()
+  if (!is.null(shape_col)) p <- p + aes(shape = pretty_label(shape))
+  p <- p + labs(title = title, x = xlab, y = ylab, shape = if (is.null(shape_col)) NULL else "Architecture")
+  add_plot(name, p, desc, width, height)
+}
+
+violin_plot <- function(d, x, y, name, title, ylab, desc, hline = NULL, rotate = FALSE) {
+  if (!has_cols(d, c(x, y))) return(invisible(NULL))
+  z <- d %>% transmute(x = pretty_label(.data[[x]]), y = num(.data[[y]])) %>% filter(!is.na(x), nzchar(x), is.finite(y))
+  if (!nrow(z)) return(invisible(NULL))
+  p <- ggplot(z, aes(x, y)) + geom_violin(trim = TRUE) + geom_boxplot(width = .14, outlier.shape = NA) + labs(title = title, x = NULL, y = ylab)
+  if (!is.null(hline)) p <- p + geom_hline(yintercept = hline, linetype = 2)
+  if (rotate) p <- p + theme(axis.text.x = element_text(angle = 35, hjust = 1))
+  add_plot(name, p, desc)
 }
 
 message("APAURA plotting")
@@ -215,29 +199,12 @@ rbp <- read_table_safe(rbp_path)
 rbp_hits <- read_table_safe(rbp_hits_path)
 rbp_profile <- read_table_safe(rbp_profile_path)
 
-# -----------------------------------------------------------------------------
 # PAS figures
-# -----------------------------------------------------------------------------
 
-if (has_cols(pas, "region")) {
-  d <- pas %>% filter(!is.na(region), nzchar(region)) %>% count(region, sort = TRUE)
-  if (nrow(d) > 0) {
-    p <- ggplot(d, aes(x = reorder(pretty_label(region), n), y = n)) +
-      geom_col() + coord_flip() +
-      labs(title = "Poly(A) sites by genomic region", x = NULL, y = "PAS count")
-    add_plot("01_pas_region_counts", p, "Number of retained PAS by annotated genomic region")
-  }
-}
-
-if (has_cols(pas, "architecture_role")) {
-  d <- pas %>% filter(!is.na(architecture_role), nzchar(architecture_role)) %>% count(architecture_role, sort = TRUE)
-  if (nrow(d) > 0) {
-    p <- ggplot(d, aes(x = reorder(pretty_label(architecture_role), n), y = n)) +
-      geom_col() + coord_flip() +
-      labs(title = "Poly(A) sites by architecture role", x = NULL, y = "PAS count")
-    add_plot("02_pas_architecture_role_counts", p, "PAS counts stratified by TUTR/ALE/other architecture role")
-  }
-}
+count_plot(pas, "region", "01_pas_region_counts", "Poly(A) sites by genomic region", "PAS count",
+           "Number of retained PAS by annotated genomic region")
+count_plot(pas, "architecture_role", "02_pas_architecture_role_counts", "Poly(A) sites by architecture role", "PAS count",
+           "PAS counts stratified by TUTR/ALE/other architecture role")
 
 if (has_cols(pas, c("gene_id", "site_id"))) {
   d <- pas %>% filter(!is.na(gene_id), nzchar(gene_id)) %>% count(gene_id, name = "n_pas")
@@ -281,20 +248,10 @@ if (has_cols(pas_coverage, c("sample", "raw_mean_depth", "fitted_mean_depth"))) 
   }
 }
 
-# -----------------------------------------------------------------------------
 # PAU figures
-# -----------------------------------------------------------------------------
 
-if (has_cols(pau, c("sample", "condition", "pau"))) {
-  d <- pau %>% mutate(pau = num(pau)) %>% filter(is.finite(pau))
-  if (nrow(d) > 0) {
-    p <- ggplot(d, aes(x = condition, y = pau)) +
-      geom_violin(trim = TRUE) +
-      geom_boxplot(width = 0.16, outlier.shape = NA) +
-      labs(title = "Poly(A)-site usage by condition", x = NULL, y = "PAU")
-    add_plot("06_pau_distribution", p, "Distribution of per-sample poly(A)-site usage by condition")
-  }
-}
+violin_plot(pau, "condition", "pau", "06_pau_distribution", "Poly(A)-site usage by condition", "PAU",
+            "Distribution of per-sample poly(A)-site usage by condition")
 
 pau_matrix <- NULL
 if (has_cols(pau, c("sample", "site_id", "pau"))) {
@@ -352,16 +309,13 @@ if (!is.null(pau_matrix) && ncol(pau_matrix) >= 3 && nrow(pau_matrix) >= 3) {
           title = "PCA of poly(A)-site usage",
           x = sprintf("PC1 (%.1f%%)", pct[1]),
           y = sprintf("PC2 (%.1f%%)", pct[2]),
-          shape = "Condition"
-        )
+          shape = "Condition")
       add_plot("08_pau_pca", p, "Principal-component analysis of per-sample PAU profiles")
     }
   }
 }
 
-# -----------------------------------------------------------------------------
 # APA site-level figures
-# -----------------------------------------------------------------------------
 
 if (has_cols(apa_sites, c("delta_pau", "fdr"))) {
   d <- apa_sites %>%
@@ -381,140 +335,42 @@ if (has_cols(apa_sites, c("delta_pau", "fdr"))) {
         title = "Differential poly(A)-site usage",
         x = expression(Delta*"PAU (case - control)"),
         y = expression(-log[10]("FDR")),
-        shape = "Significant"
-      )
+        shape = "Significant")
     add_plot("09_apa_site_volcano", p, "Site-level delta PAU versus FDR")
   }
 }
 
-if (has_cols(apa_sites, c("control_pau", "case_pau"))) {
-  d <- apa_sites %>%
-    mutate(control_pau = num(control_pau), case_pau = num(case_pau)) %>%
-    filter(is.finite(control_pau), is.finite(case_pau))
-  if (nrow(d) > 0) {
-    p <- ggplot(d, aes(x = control_pau, y = case_pau)) +
-      geom_point(alpha = 0.65) +
-      geom_abline(slope = 1, intercept = 0, linetype = 2) +
-      coord_equal() +
-      labs(title = "Condition-level PAS usage", x = "Control PAU", y = "Case PAU")
-    add_plot("10_apa_site_pau_control_vs_case", p, "Control versus case condition-level PAU at each PAS")
-  }
-}
+xy_plot(apa_sites, "control_pau", "case_pau", "10_apa_site_pau_control_vs_case", "Condition-level PAS usage",
+        "Control PAU", "Case PAU", "Control versus case condition-level PAU at each PAS", alpha = .65)
+violin_plot(apa_sites, "architecture_role", "delta_pau", "11_apa_delta_pau_by_role", "PAS usage shifts by architecture role",
+            expression(Delta*"PAU"), "Distribution of delta PAU by PAS architecture role", hline = 0, rotate = TRUE)
 
-if (has_cols(apa_sites, c("delta_pau", "architecture_role"))) {
-  d <- apa_sites %>%
-    mutate(delta_pau = num(delta_pau), architecture_role = pretty_label(architecture_role)) %>%
-    filter(is.finite(delta_pau), !is.na(architecture_role), nzchar(architecture_role))
-  if (nrow(d) > 0) {
-    p <- ggplot(d, aes(x = architecture_role, y = delta_pau)) +
-      geom_violin(trim = TRUE) +
-      geom_boxplot(width = 0.14, outlier.shape = NA) +
-      geom_hline(yintercept = 0, linetype = 2) +
-      labs(title = "PAS usage shifts by architecture role", x = NULL, y = expression(Delta*"PAU")) +
-      theme(axis.text.x = element_text(angle = 35, hjust = 1))
-    add_plot("11_apa_delta_pau_by_role", p, "Distribution of delta PAU by PAS architecture role")
-  }
-}
+# APA gene/group-level figures# APA gene/group-level figures
 
-# -----------------------------------------------------------------------------
-# APA gene/group-level figures
-# -----------------------------------------------------------------------------
-
-if (has_cols(apa, "apa_architecture")) {
-  d <- apa %>% filter(!is.na(apa_architecture), nzchar(apa_architecture)) %>% count(apa_architecture, sort = TRUE)
-  if (nrow(d) > 0) {
-    p <- ggplot(d, aes(x = reorder(pretty_label(apa_architecture), n), y = n)) +
-      geom_col() + coord_flip() +
-      labs(title = "APA architecture", x = NULL, y = "Genes / APA groups")
-    add_plot("12_apa_architecture_counts", p, "Counts of TUTR, ALE, mixed, and none architectures")
-  }
-}
-
-if (has_cols(apa, "apa_direction")) {
-  d <- apa %>% filter(!is.na(apa_direction), nzchar(apa_direction)) %>% count(apa_direction, sort = TRUE)
-  if (nrow(d) > 0) {
-    p <- ggplot(d, aes(x = reorder(pretty_label(apa_direction), n), y = n)) +
-      geom_col() + coord_flip() +
-      labs(title = "APA change direction", x = NULL, y = "Genes / APA groups")
-    add_plot("13_apa_direction_counts", p, "Counts of shortening, lengthening, ALE switches, IPA gain/loss, and other calls")
-  }
-}
+count_plot(apa, "apa_architecture", "12_apa_architecture_counts", "APA architecture", "Genes / APA groups",
+           "Counts of TUTR, ALE, mixed, and none architectures")
+count_plot(apa, "apa_direction", "13_apa_direction_counts", "APA change direction", "Genes / APA groups",
+           "Counts of shortening, lengthening, ALE switches, IPA gain/loss, and other calls")
 
 if (has_cols(apa, c("apa_architecture", "apa_direction"))) {
-  d <- apa %>%
-    filter(!is.na(apa_architecture), !is.na(apa_direction)) %>%
-    count(apa_architecture, apa_direction)
-  if (nrow(d) > 0) {
-    p <- ggplot(d, aes(x = pretty_label(apa_architecture), y = n, fill = pretty_label(apa_direction))) +
-      geom_col() +
+  d <- apa %>% filter(!is.na(apa_architecture), !is.na(apa_direction)) %>% count(apa_architecture, apa_direction)
+  if (nrow(d)) {
+    p <- ggplot(d, aes(x = pretty_label(apa_architecture), y = n, fill = pretty_label(apa_direction))) + geom_col() +
       labs(title = "APA architecture and direction", x = "APA architecture", y = "Genes / APA groups", fill = "Direction")
-    add_plot("14_apa_architecture_by_direction", p, "APA direction composition within each architecture", width = 9, height = 6)
+    add_plot("14_apa_architecture_by_direction", p, "APA direction composition within each architecture", 9, 6)
   }
 }
 
-if (has_cols(apa, c("control_wpi", "case_wpi"))) {
-  d <- apa %>%
-    mutate(control_wpi = num(control_wpi), case_wpi = num(case_wpi)) %>%
-    filter(is.finite(control_wpi), is.finite(case_wpi))
-  if (nrow(d) > 0) {
-    if (!"apa_architecture" %in% names(d)) d$apa_architecture <- "APA"
-    p <- ggplot(d, aes(x = control_wpi, y = case_wpi, shape = pretty_label(apa_architecture))) +
-      geom_point(alpha = 0.7) +
-      geom_abline(slope = 1, intercept = 0, linetype = 2) +
-      coord_equal() +
-      labs(title = "Gene-level weighted PAS position", x = "Control WPI", y = "Case WPI", shape = "Architecture")
-    add_plot("15_apa_wpi_control_vs_case", p, "Control versus case weighted poly(A)-position index")
-  }
-}
-
-if (has_cols(apa, c("delta_wpi", "apa_architecture"))) {
-  d <- apa %>%
-    mutate(delta_wpi = num(delta_wpi), apa_architecture = pretty_label(apa_architecture)) %>%
-    filter(is.finite(delta_wpi))
-  if (nrow(d) > 0) {
-    p <- ggplot(d, aes(x = apa_architecture, y = delta_wpi)) +
-      geom_violin(trim = TRUE) + geom_boxplot(width = 0.14, outlier.shape = NA) +
-      geom_hline(yintercept = 0, linetype = 2) +
-      labs(title = "Global proximal-distal APA shift", x = NULL, y = expression(Delta*"WPI"))
-    add_plot("16_apa_delta_wpi_by_architecture", p, "Distribution of gene/group delta WPI by APA architecture")
-  }
-}
-
-if (has_cols(apa, c("control_tutr_wpi", "case_tutr_wpi"))) {
-  d <- apa %>%
-    mutate(control_tutr_wpi = num(control_tutr_wpi), case_tutr_wpi = num(case_tutr_wpi)) %>%
-    filter(is.finite(control_tutr_wpi), is.finite(case_tutr_wpi))
-  if (nrow(d) > 0) {
-    p <- ggplot(d, aes(x = control_tutr_wpi, y = case_tutr_wpi)) +
-      geom_point(alpha = 0.75) + geom_abline(slope = 1, intercept = 0, linetype = 2) +
-      coord_equal() + labs(title = "TUTR positional shift", x = "Control TUTR WPI", y = "Case TUTR WPI")
-    add_plot("17_tutr_wpi_control_vs_case", p, "Within-terminal-exon proximal/distal movement for TUTR-capable genes")
-  }
-}
-
-if (has_cols(apa, c("control_ale_wpi", "case_ale_wpi"))) {
-  d <- apa %>%
-    mutate(control_ale_wpi = num(control_ale_wpi), case_ale_wpi = num(case_ale_wpi)) %>%
-    filter(is.finite(control_ale_wpi), is.finite(case_ale_wpi))
-  if (nrow(d) > 0) {
-    p <- ggplot(d, aes(x = control_ale_wpi, y = case_ale_wpi)) +
-      geom_point(alpha = 0.75) + geom_abline(slope = 1, intercept = 0, linetype = 2) +
-      coord_equal() + labs(title = "Alternative last-exon branch shift", x = "Control ALE WPI", y = "Case ALE WPI")
-    add_plot("18_ale_wpi_control_vs_case", p, "Movement among alternative terminal-exon branches")
-  }
-}
-
-if (has_cols(apa, c("control_ipa_usage", "case_ipa_usage"))) {
-  d <- apa %>%
-    mutate(control_ipa_usage = num(control_ipa_usage), case_ipa_usage = num(case_ipa_usage)) %>%
-    filter(is.finite(control_ipa_usage), is.finite(case_ipa_usage))
-  if (nrow(d) > 0 && any(d$control_ipa_usage > 0 | d$case_ipa_usage > 0)) {
-    p <- ggplot(d, aes(x = control_ipa_usage, y = case_ipa_usage)) +
-      geom_point(alpha = 0.75) + geom_abline(slope = 1, intercept = 0, linetype = 2) +
-      coord_equal() + labs(title = "Intronic polyadenylation usage", x = "Control IPA usage", y = "Case IPA usage")
-    add_plot("19_ipa_usage_control_vs_case", p, "Condition-level intronic PAS usage")
-  }
-}
+xy_plot(apa, "control_wpi", "case_wpi", "15_apa_wpi_control_vs_case", "Gene-level weighted PAS position",
+        "Control WPI", "Case WPI", "Control versus case weighted poly(A)-position index", shape_col = "apa_architecture", alpha = .7)
+violin_plot(apa, "apa_architecture", "delta_wpi", "16_apa_delta_wpi_by_architecture", "Global proximal-distal APA shift",
+            expression(Delta*"WPI"), "Distribution of gene/group delta WPI by APA architecture", hline = 0)
+xy_plot(apa, "control_tutr_wpi", "case_tutr_wpi", "17_tutr_wpi_control_vs_case", "TUTR positional shift",
+        "Control TUTR WPI", "Case TUTR WPI", "Within-terminal-exon proximal/distal movement for TUTR-capable genes")
+xy_plot(apa, "control_ale_wpi", "case_ale_wpi", "18_ale_wpi_control_vs_case", "Alternative last-exon branch shift",
+        "Control ALE WPI", "Case ALE WPI", "Movement among alternative terminal-exon branches")
+xy_plot(apa, "control_ipa_usage", "case_ipa_usage", "19_ipa_usage_control_vs_case", "Intronic polyadenylation usage",
+        "Control IPA usage", "Case IPA usage", "Condition-level intronic PAS usage", require_nonzero = TRUE)
 
 if (has_cols(apa, c("termination_shift_index", "termination_jsd"))) {
   d <- apa %>%
@@ -580,9 +436,7 @@ if (!is.null(apa) && ("gene_id" %in% names(apa) || "gene_name" %in% names(apa)))
   }
 }
 
-# -----------------------------------------------------------------------------
 # RBP figures
-# -----------------------------------------------------------------------------
 
 if (has_cols(rbp, c("rbp_name", "odds_ratio", "fisher_fdr"))) {
   d <- rbp %>%
@@ -611,8 +465,7 @@ if (has_cols(rbp, c("rbp_name", "foreground_hit_rate", "background_hit_rate"))) 
   d <- rbp %>%
     mutate(
       foreground_hit_rate = num(foreground_hit_rate),
-      background_hit_rate = num(background_hit_rate)
-    )
+      background_hit_rate = num(background_hit_rate))
   d$fdr_sort <- if ("fisher_fdr" %in% names(d)) num(d$fisher_fdr) else rep(1, nrow(d))
   d <- d %>%
     filter(is.finite(foreground_hit_rate), is.finite(background_hit_rate)) %>%
@@ -671,9 +524,7 @@ if (has_cols(rbp, c("rbp_name", "group", "fisher_fdr"))) {
   }
 }
 
-# -----------------------------------------------------------------------------
 # Write figure book and manifest
-# -----------------------------------------------------------------------------
 
 if (length(plots) > 0) {
   master_pdf <- file.path(args$out, "APAURA_figures.pdf")
@@ -695,8 +546,7 @@ run_info <- c(
   paste0("delta_pau=", args$delta_pau),
   paste0("top=", args$top),
   paste0("figures_generated=", length(plots)),
-  paste0("R_version=", R.version.string)
-)
+  paste0("R_version=", R.version.string))
 writeLines(run_info, file.path(args$out, "plot_run_info.txt"))
 
 message("Done. Figures generated: ", length(plots))
