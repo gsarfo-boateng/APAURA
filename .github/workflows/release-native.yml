@@ -40,8 +40,11 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           mkdir -p release
           cp target/APAURA.jar "release/APAURA-v${VERSION}.jar"
-          shasum -a 256 "release/APAURA-v${VERSION}.jar" \
-            > "release/APAURA-v${VERSION}.jar.sha256"
+          (
+            cd release
+            shasum -a 256 "APAURA-v${VERSION}.jar" \
+              > "APAURA-v${VERSION}.jar.sha256"
+          )
 
       - name: Upload portable JAR artifact
         uses: actions/upload-artifact@v7
